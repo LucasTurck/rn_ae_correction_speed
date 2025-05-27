@@ -1,0 +1,57 @@
+from sklearn.ensemble import RandomForestRegressor
+from prediction_f import ModelePrediction, plot_predictions
+
+class ModeleRandomForest(ModelePrediction):
+    def __init__(self, X_train, y_train, X_test=None, y_test=None):
+        super().__init__('foret_aleatoire', X_train, y_train, X_test, y_test)
+
+    def entrainer(self):
+        self.model = RandomForestRegressor()
+        self.model.fit(self.X_train, self.y_train)
+        self.y_pred_train = self.model.predict(self.X_train)
+
+    def predire(self):
+        if self.X_test is not None:
+            self.y_pred_test = self.model.predict(self.X_test)
+        else:
+            self.y_pred_test = None
+         
+            
+    def afficher(self):
+        plot_predictions(self.X_train, self.y_train, self.y_pred_train, "Random Forest - Train")
+        if self.X_test is not None and self.y_test is not None:
+            plot_predictions(self.X_test, self.y_test, self.y_pred_test, "Random Forest - Test")
+
+
+if __name__ == "__main__":
+    import argparse
+    from reed_data import lire_fichier_U
+    from dir import DATA_DIRECTORY
+    import numpy as np
+    import os
+
+
+    parser = argparse.ArgumentParser(description='Random Forest Model Training and Evaluation')
+    parser.add_argument('--e', type=int, default=145, help='Experiment number to load data for')
+    parser.add_argument('--num_sonde', type=int, default=0, help='Number of the probes to use in the model')
+    args = parser.parse_args()
+
+    # Lire les données
+    times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f'E_{args.e}', 'U'))
+    if not sondes:
+        print("Aucune donnée de sonde trouvée.")
+        exit(1)
+    
+    # Préparer les données pour l'entraînement
+    pos, col = sondes[args.num_sonde]
+    X_train = np.array([v[0] for v in col]).reshape(-1, 1)  # première composante
+    y_train = np.array([v[1] for v in col])                 # deuxième composante
+
+    # Créer et entraîner le modèle
+    model_rf = ModeleRandomForest(X_train, y_train)
+    model_rf.entrainer()
+    
+    print(f"R² pour l'entraînement : {model_rf.R2entrainement()}")
+    
+    # Afficher les résultats
+    model_rf.afficher()
