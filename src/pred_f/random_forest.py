@@ -25,10 +25,12 @@ class ModeleRandomForest(ModelePrediction):
 
 if __name__ == "__main__":
     import argparse
+    import sys
+    import os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     from reed_data import lire_fichier_U
     from dir import DATA_DIRECTORY
     import numpy as np
-    import os
 
 
     parser = argparse.ArgumentParser(description='Random Forest Model Training and Evaluation')
