@@ -4,6 +4,7 @@ import re
 
 def lire_fichier_U(filepath):
     times = []
+    sondes = {}  # Dictionnaire pour stocker les sondes
     colonnes = []  # Liste de listes : colonnes[i][j] = tuple (x, y, z) pour la sonde i au temps j
     positions_sondes = []
     
@@ -50,8 +51,11 @@ def lire_fichier_U(filepath):
         for i, match in enumerate(matches):
             coords = tuple(float(x) for x in match.strip().split())
             colonnes[i].append(coords)
+    
+    for i in range(len(positions_sondes)):
+        sondes[i] = [positions_sondes[i], colonnes[i]]
 
-    return times, colonnes, positions_sondes
+    return times, sondes
 
 if __name__ == "__main__":
     # Exemple d'utilisation
@@ -60,8 +64,8 @@ if __name__ == "__main__":
     if not os.path.exists(filepath):
         print("Le fichier n'existe pas :", filepath)
         exit(1)
-    times, colonnes, positions_sondes = lire_fichier_U(filepath)        
+    times, sondes = lire_fichier_U(filepath)        
     print("Temps :", times[:4])
-    print("Positions sondes :", positions_sondes)
-    for i, col in enumerate(colonnes):
-        print(f"Sonde {i} :", col[:4])
+    for i, (pos, col) in sondes.items():
+        print(f"Sonde {i} (position):", pos)
+        print(f"Sonde {i} (extrait):", col[:4])
