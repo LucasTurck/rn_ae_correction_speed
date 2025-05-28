@@ -7,6 +7,14 @@ from reed_data import lire_fichier_U
 from dir import DATA_DIRECTORY
 import numpy as np
 
+
+"""
+Module de prédiction pour les données de sonde.
+
+Ce module définit la classe de base ModelePrediction pour l'entraînement, 
+la prédiction et l'évaluation de modèles de régression sur des données de sondes.
+
+"""
 class ModelePrediction:
     def __init__(self, nom_modele, prediction = [0,0], X_train = None, y_train = None, X_test=None, y_test=None):
         self.nom_modele = nom_modele
