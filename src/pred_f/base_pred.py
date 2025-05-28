@@ -86,7 +86,7 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Regression Lineaire Model Training and Evaluation')
-    parser.add_argument('--e', type=int, default=145, help='Experiment number to load data for')
+    parser.add_argument('--E', type=int, default=145, help='Experiment number to load data for')
     parser.add_argument('--num_sonde', type=int, default=0, help='Number of the probe to use in the model')
     parser.add_argument('--methode', type=str, choices=['lineaire', 'polynomiale', 'naive', 'aleatoire'], default='lineaire', help='Method of regression to use')
     parser.add_argument('--nb_training', type=int, default=-1, help='Number of training samples to use, -1 for all')
@@ -107,8 +107,8 @@ if __name__ == "__main__":
         raise ValueError("Méthode inconnue. Choisissez parmi 'lineaire', 'polynomiale', 'naive', 'aleatoire'.")
 
 
-    model.remplissage_donnees(e=args.e, num_sonde=args.num_sonde, nb_training=args.nb_training)
-    
+    model.remplissage_donnees(E=args.E, num_sonde=args.num_sonde, nb_training=args.nb_training)
+
     model.entrainer()
     print(f"R² pour l'entraînement : {model.R2entrainement()}")
     

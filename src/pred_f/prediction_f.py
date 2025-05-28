@@ -28,9 +28,26 @@ class ModelePrediction:
         self.y_pred_train = None
         self.y_pred_test = None
     
-    def remplissage_donnees(self, e = 145, num_sonde = 0, nb_training=-1, nb_test=-1):
+    def remplissage_donnees(self, E = 145, num_sonde = 0, nb_training=-1, nb_test=-1):
+        """
+        Remplit les données d'entraînement pour la prédiction à partir des fichiers de données de sonde.
+        Cette méthode lit les données d'une sonde spécifique à partir d'un fichier, prépare les caractéristiques (features) et les cibles (targets) pour l'entraînement d'un modèle de prédiction, en tenant compte des paramètres de fenêtre de prédiction définis dans `self.prediction`.
+        Args:
+            e (int, optional): Numéro de l'expérience ou identifiant du dossier de données. Par défaut à 145.
+            num_sonde (int, optional): Numéro de la sonde à utiliser pour l'extraction des données. Par défaut à 0.
+            nb_training (int, optional): Nombre maximal d'échantillons d'entraînement à utiliser. Si négatif, utilise toutes les données disponibles. Par défaut à -1.
+            nb_test (int, optional): Nombre maximal d'échantillons de test à utiliser (non utilisé dans cette méthode). Par défaut à -1.
+        Side Effects:
+            Remplit les attributs `self.X_train` (features d'entraînement) et `self.y_train` (cibles d'entraînement) sous forme de tableaux NumPy.
+        Raises:
+            Affiche un message d'erreur et termine le programme si :
+                - Aucune donnée de sonde n'est trouvée.
+                - La sonde spécifiée n'est pas présente dans les données.
+                - Il n'y a pas de données pour la sonde spécifiée.
+                - Le nombre d'échantillons d'entraînement ne correspond pas au nombre de cibles.
+        """
         # Lire les données
-        times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f'E_{e}', 'U'))
+        times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f'E_{E}', 'U'))
         if not sondes:
             print("Aucune donnée de sonde trouvée.")
             exit(1)
@@ -78,6 +95,13 @@ class ModelePrediction:
         raise NotImplementedError
     
     def R2entrainement(self):
+        """
+        Calculate and return the R² (coefficient of determination) score for the training predictions.
+        Returns:
+            float or None: The R² score of the training predictions if available and valid,
+            otherwise None. Prints an error message if the number of predictions does not
+            match the number of targets.
+        """
         if self.y_pred_train is not None:
             
             if len(self.y_pred_train) != len(self.y_train):
@@ -100,6 +124,36 @@ class ModelePrediction:
 
 
 def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True):
+    """
+    Plots predicted values against true values for a regression task.
+
+    Parameters
+    ----------
+    X : array-like, shape (n_samples, n_features) or (n_samples,)
+        Input features. If multidimensional, only the first feature is used for the x-axis.
+
+    y : array-like, shape (n_samples,)
+        True target values.
+
+    y_pred : array-like, shape (n_samples,)
+        Predicted target values.
+
+    title : str, optional (default="Prédictions vs Réel")
+        Title of the plot.
+
+    block : bool, optional (default=True)
+        Whether to block execution until the plot window is closed.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    - Displays a scatter plot of the true values and predictions.
+    - The R2 score is shown in the legend.
+    - Only the first feature of X is used for plotting if X is multidimensional.
+    """
     if len(X[0]) > 1:
         X = X[:, 0]  # Utiliser seulement la première composante pour l'affichage
     # print("Nombre de prédictions :", len(y_pred))
@@ -114,14 +168,3 @@ def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True):
     plt.legend(title=f"R2 = {r2_score(y, y_pred):.3f}")
     plt.grid(True)
     plt.show(block=block)
-        
-def scatter_plot(X, y, sonde_num):
-    # Affichage d'un nuage de points pour la sonde choisie
-    plt.figure(figsize=(6, 6))
-    plt.scatter(X, y, alpha=0.5, label="Données réelles")
-    plt.xlabel("Première composante (X)")
-    plt.ylabel("Deuxième composante (Y)")
-    plt.title(f"Sonde {sonde_num} : relation X/Y")
-    plt.legend()
-    plt.grid(True)
-    plt.show()

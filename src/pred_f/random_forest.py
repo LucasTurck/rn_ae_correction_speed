@@ -34,23 +34,16 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser(description='Random Forest Model Training and Evaluation')
-    parser.add_argument('--e', type=int, default=145, help='Experiment number to load data for')
+    parser.add_argument('--E', type=int, default=145, help='Experiment number to load data for')
     parser.add_argument('--num_sonde', type=int, default=0, help='Number of the probes to use in the model')
     args = parser.parse_args()
 
-    # Lire les données
-    times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f'E_{args.e}', 'U'))
-    if not sondes:
-        print("Aucune donnée de sonde trouvée.")
-        exit(1)
     
-    # Préparer les données pour l'entraînement
-    pos, col = sondes[args.num_sonde]
-    X_train = np.array([v[0] for v in col]).reshape(-1, 1)  # première composante
-    y_train = np.array([v[1] for v in col])                 # deuxième composante
-
     # Créer et entraîner le modèle
-    model_rf = ModeleRandomForest(X_train, y_train)
+    model_rf = ModeleRandomForest()
+    
+    model_rf.remplissage_donnees(E=args.E, num_sonde=args.num_sonde)
+    
     model_rf.entrainer()
     
     print(f"R² pour l'entraînement : {model_rf.R2entrainement()}")
