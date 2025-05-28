@@ -1,4 +1,4 @@
-from prediction_f import ModelePrediction, plot_predictions
+from prediction_f import ModelePrediction, plot_predictions, args_to_dict
 from tensorflow import keras
 from tensorflow.keras import layers
 from tqdm.keras import TqdmCallback
@@ -103,13 +103,12 @@ class ModeleReseauNeurones(ModelePrediction):
     afficher():
         Affiche les prédictions du modèle sur les ensembles d'entraînement et de test à l'aide de graphiques.
     """
-    def __init__(self, prediction, architecture = "dense_simple", epochs=1000, batch_size=64):
-        super().__init__('reseau_neurones', prediction)
-        self.architecture = architecture
-        self.parametres = {
-            "epochs": epochs,
-            "batch_size": batch_size
-        }
+    def __init__(self, parameters=None):
+        super().__init__('reseau_neurones', parameters)
+        
+    def init_parameters(self):
+        super().init_parameters()
+        self.architecture = self.parameters.get("architecture", "dense_simple")
 
     def create_reseau(self):
         if self.X_train is None:
@@ -124,13 +123,13 @@ class ModeleReseauNeurones(ModelePrediction):
         if architecture is None:
             print(f"Erreur : L'architecture '{architecture}' n'est pas définie dans 'architectures.json'.")
             
-        self.reseau = build_model(self.X_train.shape[1:], architecture)
+        self.model = build_model(self.X_train.shape[1:], architecture)
 
     def entrainer(self):
-        self.reseau.compile(optimizer='adam', loss='mse')
-        self.model = self.reseau.fit(self.X_train, self.y_train, epochs=self.parametres["epochs"], batch_size=self.parametres["batch_size"], verbose=0, 
-                                  callbacks=[TqdmCallback(verbose=1)])
-        self.y_pred_train = self.reseau.predict(self.X_train).flatten()
+        self.model.compile(optimizer='adam', loss='mse')
+        self.model.fit(self.X_train, self.y_train, epochs=self.parameters["epochs"], batch_size=self.parameters["batch_size"], verbose=0,
+                       callbacks=[TqdmCallback(verbose=1)])
+        self.y_pred_train = self.model.predict(self.X_train).flatten()
 
     def predire(self):
         if self.X_test is not None:
@@ -139,16 +138,40 @@ class ModeleReseauNeurones(ModelePrediction):
             self.y_pred_test = None
 
     def afficher(self):
-        plot_predictions(self.X_train, self.y_train, self.y_pred_train, f"Réseau de Neurones : {self.architecture}, predictions : {self.prediction}, epochs = {self.parametres['epochs']}, batch_size = {self.parametres['batch_size']} - Train")
+        plot_predictions(self.X_train, self.y_train, self.y_pred_train, 
+                         f"Train - Réseau de Neurones : {self.architecture}, predictions : {self.parameters['prediction']}, epochs = {self.parameters['epochs']}, batch_size = {self.parameters['batch_size']}", block=False)
         if self.X_test is not None and self.y_test is not None:
-            plot_predictions(self.X_test, self.y_test, self.y_pred_test, f"Réseau de Neurones : {self.architecture}, predictions : {self.prediction}, epochs = {self.parametres['epochs']}, batch_size = {self.parametres['batch_size']} - Test")
+            plot_predictions(self.X_test, self.y_test, self.y_pred_test, 
+                             f"Test - Réseau de Neurones : {self.architecture}, predictions : {self.parameters['prediction']}, epochs = {self.parameters['epochs']}, batch_size = {self.parameters['batch_size']}", block=True)
+
+    def sauvegarder_apprentissage(self, dossier="sauvegardes"):
+        """
+        Sauvegarde les poids du modèle et l'historique d'entraînement dans un dossier.
+        """
+        if not os.path.exists(dossier):
+            os.makedirs(dossier)
+        nom_base = f"{self.architecture}_{horodatage}"
+
+        # Sauvegarde des poids
+        chemin_modele = os.path.join(dossier, f"{nom_base}_poids.h5")
+        self.reseau.save_weights(chemin_modele)
+
+        # Sauvegarde de l'historique d'entraînement
+        chemin_historique = os.path.join(dossier, f"{nom_base}_historique.json")
+        if self.model is not None:
+            with open(chemin_historique, "w") as f:
+                json.dump(self.model.history.history, f)
+
+        print(f"Modèle et historique sauvegardés dans {dossier}")
+
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description='Réseau de Neurones Model Training and Evaluation')
     parser.add_argument('--E', type=int, default=145, help='Experiment number to load data for')
-    parser.add_argument('--num_sonde', type=int, default=0, help='Number of the probes to use in the model')
+    parser.add_argument('--num_sonde_train', type=int, default=0, help='Number of the probes to use in the model')
+    parser.add_argument('--num_sonde_test', type=int, default=1, help='Number of the probes to use in the model for testing')
     parser.add_argument('--nb_training', type=int, default=100, help='Number of training samples to use, -1 for all')
     parser.add_argument('--nb_test', type=int, default=-1, help='Number of test samples to use, -1 for all')
     parser.add_argument('--prediction', type=int, nargs=2, default=[0, 0], help='Prediction parameters [p, f] where p is the number of previous samples of u and f is the number of previous samples of v to use')
@@ -156,17 +179,24 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs for training')
     parser.add_argument('--batch_size', type=int, default=64, help='Batch size for training')
     args = parser.parse_args()
+    args_dict = args_to_dict(args)
 
     # Créer
-    model_nn = ModeleReseauNeurones(prediction =args.prediction, architecture=args.architecture, epochs=args.epochs, batch_size=args.batch_size)
-    # Remplir les données
-    model_nn.remplissage_donnees(E=args.E, num_sonde=args.num_sonde, nb_training=args.nb_training, nb_test=args.nb_test)
+    model_nn = ModeleReseauNeurones(parameters=args_dict)
+    # Remplir les données d'entraînement
+    model_nn.remplissage_donnees()
 
     model_nn.create_reseau()
 
     model_nn.entrainer()
     
     print(f"R² pour l'entraînement : {model_nn.R2entrainement()}")
+    
+    # Remplir les données de test
+    model_nn.remplissage_donnees(train=False)
+
+    # Prédire les valeurs sur les données de test
+    model_nn.predire()
     
     # Afficher les résultats
     model_nn.afficher()

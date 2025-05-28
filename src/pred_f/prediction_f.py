@@ -7,7 +7,6 @@ from reed_data import lire_fichier_U
 from dir import DATA_DIRECTORY
 import numpy as np
 
-
 """
 Module de prédiction pour les données de sonde.
 
@@ -16,19 +15,34 @@ la prédiction et l'évaluation de modèles de régression sur des données de s
 
 """
 class ModelePrediction:
-    def __init__(self, nom_modele, prediction = [0,0], X_train = None, y_train = None, X_test=None, y_test=None):
+    def __init__(self, nom_modele, parameters=None):
         self.nom_modele = nom_modele
-        self.prediction = prediction
-        self.X_train = X_train
-        self.y_train = y_train
-        self.r2train = -1
-        self.X_test = X_test
-        self.y_test = y_test
         self.model = None
+        self.parameters = parameters if parameters is not None else {}
+        self.X_train = None
+        self.y_train = None
         self.y_pred_train = None
+        self.r2train = -1
+        self.X_test = None
+        self.y_test = None
         self.y_pred_test = None
+        self.r2test = -1
+        self.init_parameters()
+
+    def init_parameters(self):
+        """
+        Initialise les paramètres du modèle de prédiction.
+        Définit les paramètres par défaut pour l'entraînement et la prédiction.
+        """
+        self.parameters['E'] = self.parameters.get('E', 145)
+        self.parameters['num_sonde_train'] = self.parameters.get('num_sonde_train', 0)
+        self.parameters['num_sonde_test'] = self.parameters.get('num_sonde_test', 1)
+        self.parameters['nb_training'] = self.parameters.get('nb_training', -1)
+        self.parameters['nb_test'] = self.parameters.get('nb_test', -1)
+        self.parameters['prediction'] = self.parameters.get('prediction', [0, 0])  # [p, f] pour X_{i-p}, X_{i}, y_{i-f}
+        
     
-    def remplissage_donnees(self, E = 145, num_sonde = 0, nb_training=-1, nb_test=-1):
+    def remplissage_donnees(self, train = True):
         """
         Remplit les données d'entraînement pour la prédiction à partir des fichiers de données de sonde.
         Cette méthode lit les données d'une sonde spécifique à partir d'un fichier, prépare les caractéristiques (features) et les cibles (targets) pour l'entraînement d'un modèle de prédiction, en tenant compte des paramètres de fenêtre de prédiction définis dans `self.prediction`.
@@ -47,28 +61,38 @@ class ModelePrediction:
                 - Le nombre d'échantillons d'entraînement ne correspond pas au nombre de cibles.
         """
         # Lire les données
-        times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f'E_{E}', 'U'))
+        times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f"E_{self.parameters['E']}", 'U'))
         if not sondes:
             print("Aucune donnée de sonde trouvée.")
             exit(1)
+        
+        if train:
+            # Utiliser les données d'entraînement
+            num_sonde = self.parameters['num_sonde_train']
+            nb_samples = self.parameters['nb_training']
+        else:
+            # Utiliser les données de test
+            num_sonde = self.parameters['num_sonde_test']
+            nb_samples = self.parameters['nb_test']
         
         # Préparer les données pour l'entraînement
         if num_sonde not in sondes:
             print(f"Sonde {num_sonde} non trouvée dans les données.")
             exit(1)
-        pos, col = sondes[num_sonde]
+        col = sondes[num_sonde][1]
         if col is None:
             print(f"Pas de données pour la sonde {num_sonde}.")
             exit(1)
+
         
-        if nb_training > 0 and nb_training < len(col):
+        if nb_samples > 0 and nb_samples < len(col):
             # Limiter le nombre d'échantillons d'entraînement
-            col = col[:nb_training]
-            
+            col = col[:nb_samples]
+
         # Par exemple, pour prediction = [1,1] (utilise X_{i-1}, X_{i} et y_{i-1})
-        p = self.prediction[0]
-        f = self.prediction[1]
-        X_train = []
+        p = self.parameters['prediction'][0]
+        f = self.parameters['prediction'][1]
+        X = []
         for i in range(max(p, f), len(col)):
             features = [col[i][0]]
             # Ajoute X_{i-p} ... X_{i}
@@ -76,19 +100,39 @@ class ModelePrediction:
                 features.append(col[i-k-1][0])
             # Ajoute X_{i-1-f} ... X_{i-1}
             for k in range(f):
-                features.append(col[i-k-1][1])
-            X_train.append(features)
-        self.X_train = np.array(X_train)
-        self.y_train = np.array([col[i][1] for i in range(max(p, f), len(col))])
+                features.append(col[i-k-1][2])
+            X.append(features)
+        if train:
+            # Entraînement
+            self.X_train = np.array(X)
+            self.y_train = np.array([col[i][1] for i in range(max(p, f), len(col))])
+        else:
+            # Test
+            self.X_test = np.array(X)
+            self.y_test = np.array([col[i][1] for i in range(max(p, f), len(col))])
         
         # print(f"Nombre d'échantillons d'entraînement : {len(self.X_train)}")
         # print(f"Nombre de caractéristiques d'entraînement : {self.X_train.shape[1]}")
         # print(f"Nombre de cibles d'entraînement : {len(self.y_train)}")
-        if len(self.X_train) != len(self.y_train):
-            print("Erreur : Le nombre d'échantillons d'entraînement ne correspond pas aux cibles.")
+        if train and len(self.X_train) != len(self.y_train):
+            print("Erreur : Le nombre d'échantillons d'entraînement ne correspond pas au nombre de cibles.")
             exit(1)
+        if not train and self.X_test is not None and len(self.X_test) != len(self.y_test):
+            print("Erreur : Le nombre d'échantillons de test ne correspond pas au nombre de cibles.")
+            exit(1)
+        if self.X_train is not None and self.X_test is not None:
+            if self.X_train.shape[1] != self.X_test.shape[1]:
+                print("Erreur : Le nombre de caractéristiques d'entraînement ne correspond pas au nombre de caractéristiques de test.")
+                exit(1)
+            
     
     def entrainer(self):
+        raise NotImplementedError
+    
+    def sauvegarder_apprentissage(self, dir_path):
+        raise NotImplementedError
+    
+    def charger_apprentissage(self, dir_path):
         raise NotImplementedError
 
     def predire(self, X):
@@ -103,9 +147,9 @@ class ModelePrediction:
             match the number of targets.
         """
         if self.y_pred_train is not None:
-            # print("Nombre de prédictions d'entraînement :", len(self.y_pred_train))
-            # print("Nombre de cibles d'entraînement :", len(self.y_train))
-            
+            # print("R² - Nombre de prédictions d'entraînement :", len(self.y_pred_train))
+            # print("R² - Nombre de cibles d'entraînement :", len(self.y_train))
+
             if len(self.y_pred_train) != len(self.y_train):
                 print("Erreur : Le nombre de prédictions d'entraînement ne correspond pas aux cibles.")
                 return None
@@ -114,9 +158,12 @@ class ModelePrediction:
         return None
 
     def evaluer(self):
-        if self.X_test is not None and self.y_test is not None:
-            y_pred = self.predire(self.X_test)
-            return r2_score(self.y_test, y_pred)
+        # print("evaluer - Nombre de prédictions de test :", len(self.y_pred_test) if self.y_pred_test is not None else "Aucune")
+        # print("evaluer - Nombre de cibles de test :", len(self.y_test) if self.y_test is not None else "Aucune")
+        if self.y_pred_test is not None:
+            if self.y_test is not None:
+                self.r2test = r2_score(self.y_test, self.y_pred_test)
+                return self.r2test
         return None
 
     def afficher(self):
@@ -156,15 +203,31 @@ def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True):
     """
     if len(X[0]) > 1:
         X = X[:, 0]  # Utiliser seulement la première composante pour l'affichage
-    # print("Nombre de prédictions :", len(y_pred))
-    # print("Nombre de cibles :", len(y))
-    # print("Nombre de caractéristiques :", X.shape)
+    # print("plot_predictions - Nombre de prédictions :", len(y_pred))
+    # print("plot_predictions - Nombre de cibles :", len(y))
+    # print("plot_predictions - Nombre de caractéristiques :", X.shape)
     plt.figure(figsize=(8, 6))
     plt.scatter(X, y, color='blue', label='Données réelles', alpha=0.5)
     plt.scatter(X, y_pred, color='red', label='Prédictions', alpha=0.5)
     plt.xlabel("Première composante (u)")
     plt.ylabel("Deuxième composante (v)")
     plt.title(title)
-    plt.legend(title=f"R2 = {r2_score(y, y_pred):.3f}")
+    plt.legend(title=f"R2 = {r2_score(y, y_pred):.5f}")
     plt.grid(True)
     plt.show(block=block)
+
+def args_to_dict(args):
+    """
+    Convert command line arguments to a dictionary.
+    
+    Parameters
+    ----------
+    args : Namespace
+        The parsed command line arguments.
+    
+    Returns
+    -------
+    dict
+        A dictionary with argument names as keys and their values.
+    """
+    return {k: v for k, v in vars(args).items() if v is not None}
