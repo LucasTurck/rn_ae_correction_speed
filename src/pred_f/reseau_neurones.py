@@ -1,30 +1,67 @@
 from prediction_f import ModelePrediction, plot_predictions
 from tensorflow import keras
 from tensorflow.keras import layers
+from tqdm.keras import TqdmCallback
+import json
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
 
-def reseau_neurones(X):
-    reseau = keras.Sequential([
-        layers.Input(shape=(X.shape[1],)),
-        layers.Reshape((X.shape[1], 1)),
-    layers.Conv1D(64, kernel_size=3, activation='relu', padding='same'),
-    layers.Conv1D(64, kernel_size=3, activation='relu', padding='same'),
-    layers.Flatten(),
-    layers.Dense(128, activation='relu'),
-    layers.Dense(64, activation='relu'),
-    layers.Dense(32, activation='relu'),
-    layers.Dense(1)
-    ])
-    
-    return reseau
+
+def build_model(input_shape, layer_defs):
+    model = keras.Sequential()
+    model.add(layers.Input(shape=input_shape))
+    for layer in layer_defs:
+        if layer["type"] == "Dense":
+            model.add(layers.Dense(layer["units"], activation=layer.get("activation")))
+        elif layer["type"] == "Conv1D":
+            model.add(layers.Conv1D(
+                filters=layer["filters"],
+                kernel_size=layer["kernel_size"],
+                activation=layer.get("activation"),
+                padding=layer.get("padding", "valid")
+            ))
+        elif layer["type"] == "Flatten":
+            model.add(layers.Flatten())
+        elif layer["type"] == "Reshape":
+            if not isinstance(layer["target_shape"], list):
+                model.add(layers.Reshape((input_shape[0], layer["target_shape"])))
+            else:
+                model.add(layers.Reshape(tuple(layer["target_shape"])))
+        # Ajoute d'autres types de couches si besoin
+    return model
+
+def get_architecture_by_name(name, architectures):
+    for arch in architectures:
+        if arch["name"] == name:
+            return arch["layers"]
+    raise ValueError(f"Architecture '{name}' non trouvée.")
+
+
 
 class ModeleReseauNeurones(ModelePrediction):
-    def __init__(self, prediction, X_train=None, y_train=None, X_test=None, y_test=None):
+    def __init__(self, prediction, architecture = "dense_simple", X_train=None, y_train=None, X_test=None, y_test=None):
         super().__init__('reseau_neurones', prediction, X_train, y_train, X_test, y_test)
+        self.architecture = architecture
+
+    def create_reseau(self):
+        if self.X_train is None:
+            print("Erreur : X_train n'est pas défini.")
         
+        json_path = os.path.join(os.path.dirname(__file__), "architectures.json")
+        with open(json_path) as f:
+            architectures = json.load(f)
+            
+        self.architecture = get_architecture_by_name(self.architecture, architectures)
+        
+        if self.architecture is None:
+            print(f"Erreur : L'architecture '{self.architecture}' n'est pas définie dans 'architectures.json'.")
+            
+        self.reseau = build_model(self.X_train.shape[1:], self.architecture)
 
     def entrainer(self):
         self.reseau.compile(optimizer='adam', loss='mse')
-        self.model = self.reseau.fit(self.X_train, self.y_train, epochs=1000, batch_size=64, verbose=0)
+        self.model = self.reseau.fit(self.X_train, self.y_train, epochs=1000, batch_size=64, verbose=0, 
+                                  callbacks=[TqdmCallback(verbose=1)])
         self.y_pred_train = self.reseau.predict(self.X_train).flatten()
 
     def predire(self):
@@ -47,13 +84,17 @@ if __name__ == "__main__":
     parser.add_argument('--nb_training', type=int, default=-1, help='Number of training samples to use, -1 for all')
     parser.add_argument('--nb_test', type=int, default=-1, help='Number of test samples to use, -1 for all')
     parser.add_argument('--prediction', type=int, nargs=2, default=[0, 0], help='Prediction parameters [p, f] where p is the number of previous samples of u and f is the number of previous samples of v to use')
+    parser.add_argument('--architecture', type=str, default='dense_simple', help='Name of the neural network architecture to use')
+    parser.add_argument('--verbose', action='store_true', help='Enable verbose output during training')
+    parser.add_argument('--epochs', type=int, default=1000, help='Number of epochs for training')
+    parser.add_argument('--batch_size', type=int, default=64, help='Batch size for training')
     args = parser.parse_args()
 
     # Créer et entraîner le modèle
-    model_nn = ModeleReseauNeurones(prediction =args.prediction)
+    model_nn = ModeleReseauNeurones(prediction =args.prediction, architecture=args.architecture)
     model_nn.remplissage_donnees(e=args.e, num_sonde=args.num_sonde, nb_training=args.nb_training, nb_test=args.nb_test)
 
-    model_nn.reseau = reseau_neurones(model_nn.X_train)
+    model_nn.create_reseau()
 
     model_nn.entrainer()
     

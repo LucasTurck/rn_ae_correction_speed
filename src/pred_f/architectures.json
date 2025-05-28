@@ -1,0 +1,83 @@
+[
+    {
+        "name": "dense_simple",
+        "layers": [
+            {"type": "Dense", "units": 128, "activation": "relu"},
+            {"type": "Dense", "units": 64, "activation": "relu"},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "conv_deep_dense",
+        "layers": [
+            {"type": "Reshape", "target_shape": 1},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "Flatten"},
+            {"type": "Dense", "units": 128, "activation": "relu"},
+            {"type": "Dense", "units": 64, "activation": "relu"},
+            {"type": "Dense", "units": 32, "activation": "relu"},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "conv_deep_dense_dropout",
+        "layers": [
+            {"type": "Reshape", "target_shape": 1},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "Flatten"},
+            {"type": "Dense", "units": 128, "activation": "relu"},
+            {"type": "Dropout", "rate": 0.5},
+            {"type": "Dense", "units": 64, "activation": "relu"},
+            {"type": "Dense", "units": 32, "activation": "relu"},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "conv_dense",
+        "layers": [
+            {"type": "Reshape", "target_shape": 1},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "Flatten"},
+            {"type": "Dense", "units": 32, "activation": "relu"},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "lstm_simple",
+        "layers": [
+            {"type": "LSTM", "units": 50, "return_sequences": true},
+            {"type": "LSTM", "units": 25},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "gru_simple",
+        "layers": [
+            {"type": "GRU", "units": 50, "return_sequences": true},
+            {"type": "GRU", "units": 25},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "cnn_lstm",
+        "layers": [
+            {"type": "Reshape", "target_shape": 1},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "LSTM", "units": 50, "return_sequences": true},
+            {"type": "LSTM", "units": 25},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "cnn_gru",
+        "layers": [
+            {"type": "Reshape", "target_shape": 1},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "GRU", "units": 50, "return_sequences": true},
+            {"type": "GRU", "units": 25},
+            {"type": "Dense", "units": 1}
+        ]
+    }
+]
