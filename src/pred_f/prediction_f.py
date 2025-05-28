@@ -103,12 +103,12 @@ class ModelePrediction:
             match the number of targets.
         """
         if self.y_pred_train is not None:
+            # print("Nombre de prédictions d'entraînement :", len(self.y_pred_train))
+            # print("Nombre de cibles d'entraînement :", len(self.y_train))
             
             if len(self.y_pred_train) != len(self.y_train):
                 print("Erreur : Le nombre de prédictions d'entraînement ne correspond pas aux cibles.")
                 return None
-            # print("Nombre de prédictions d'entraînement :", len(self.y_pred_train))
-            # print("Nombre de cibles d'entraînement :", len(self.y_train))
             self.r2train = r2_score(self.y_train, self.y_pred_train)
             return self.r2train
         return None
@@ -162,8 +162,8 @@ def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True):
     plt.figure(figsize=(8, 6))
     plt.scatter(X, y, color='blue', label='Données réelles', alpha=0.5)
     plt.scatter(X, y_pred, color='red', label='Prédictions', alpha=0.5)
-    plt.xlabel("Première composante (X)")
-    plt.ylabel("Deuxième composante (Y)")
+    plt.xlabel("Première composante (u)")
+    plt.ylabel("Deuxième composante (v)")
     plt.title(title)
     plt.legend(title=f"R2 = {r2_score(y, y_pred):.3f}")
     plt.grid(True)

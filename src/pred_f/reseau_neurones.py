@@ -119,12 +119,12 @@ class ModeleReseauNeurones(ModelePrediction):
         with open(json_path) as f:
             architectures = json.load(f)
             
-        self.architecture = get_architecture_by_name(self.architecture, architectures)
+        architecture = get_architecture_by_name(self.architecture, architectures)
         
-        if self.architecture is None:
-            print(f"Erreur : L'architecture '{self.architecture}' n'est pas définie dans 'architectures.json'.")
+        if architecture is None:
+            print(f"Erreur : L'architecture '{architecture}' n'est pas définie dans 'architectures.json'.")
             
-        self.reseau = build_model(self.X_train.shape[1:], self.architecture)
+        self.reseau = build_model(self.X_train.shape[1:], architecture)
 
     def entrainer(self):
         self.reseau.compile(optimizer='adam', loss='mse')
@@ -139,10 +139,10 @@ class ModeleReseauNeurones(ModelePrediction):
             self.y_pred_test = None
 
     def afficher(self):
-        plot_predictions(self.X_train, self.y_train, self.y_pred_train, "Réseau de Neurones - Train")
+        plot_predictions(self.X_train, self.y_train, self.y_pred_train, f"Réseau de Neurones : {self.architecture}, predictions : {self.prediction}, epochs = {self.parametres['epochs']}, batch_size = {self.parametres['batch_size']} - Train")
         if self.X_test is not None and self.y_test is not None:
-            plot_predictions(self.X_test, self.y_test, self.y_pred_test, "Réseau de Neurones - Test")
-    
+            plot_predictions(self.X_test, self.y_test, self.y_pred_test, f"Réseau de Neurones : {self.architecture}, predictions : {self.prediction}, epochs = {self.parametres['epochs']}, batch_size = {self.parametres['batch_size']} - Test")
+
 if __name__ == "__main__":
     import argparse
 

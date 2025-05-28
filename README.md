@@ -4,19 +4,19 @@ Apprentissage non supervisé pour la correction des mesures de vitesse en écoul
 # Installation 
 Avant de lancer le script, il faut installer les bibliothèques nécessaires (le script a été testé avec Python 3.8.10) :
 
-- tensorflow
+- tensorflow : 
     pip install tensorflow
-- keras
+- keras : 
     pip install keras
-- tqdm ( pour la barre de progression)
+- tqdm ( pour la barre de progression) : 
     pip install tqdm
 
 # Lancement du script
 Pour lancer le script, il suffit de se placer dans le repertoire du projet : rn_ae_correction_speed et de lancer la commande suivante :
 
-- pour l'apprentissage du réseau de neurones
+- pour l'apprentissage du réseau de neurones : 
     python .\src\pred_f\reseau_neurones.py
-- pour le random forest
+- pour le random forest : 
     python .\src\pred_f\random_forest.py
 
 ## paramètres
