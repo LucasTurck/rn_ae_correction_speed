@@ -1,0 +1,14 @@
+{
+  "architecture": "conv_dense",
+  "E": 145,
+  "num_sonde_train": 0,
+  "num_sonde_test": 1,
+  "nb_training": -1,
+  "nb_test": 100,
+  "prediction": [
+    1,
+    1
+  ],
+  "epochs": 100,
+  "batch_size": 64
+}

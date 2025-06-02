@@ -38,10 +38,9 @@ class ModelePrediction:
         self.parameters['num_sonde_train'] = self.parameters.get('num_sonde_train', 0)
         self.parameters['num_sonde_test'] = self.parameters.get('num_sonde_test', 1)
         self.parameters['nb_training'] = self.parameters.get('nb_training', -1)
-        self.parameters['nb_test'] = self.parameters.get('nb_test', -1)
-        self.parameters['prediction'] = self.parameters.get('prediction', [0, 0])  # [p, f] pour X_{i-p}, X_{i}, y_{i-f}
+        self.parameters['nb_test'] = self.parameters.get('nb_test', 100)
+        self.parameters['prediction'] = self.parameters.get('prediction', [0, 0, 0])
         
-    
     def remplissage_donnees(self, train = True):
         """
         Remplit les données d'entraînement pour la prédiction à partir des fichiers de données de sonde.
@@ -92,6 +91,7 @@ class ModelePrediction:
         # Par exemple, pour prediction = [1,1] (utilise X_{i-1}, X_{i} et y_{i-1})
         p = self.parameters['prediction'][0]
         f = self.parameters['prediction'][1]
+        h = self.parameters['prediction'][2]
         X = []
         for i in range(max(p, f), len(col)):
             features = [col[i][0]]
@@ -100,6 +100,9 @@ class ModelePrediction:
                 features.append(col[i-k-1][0])
             # Ajoute X_{i-1-f} ... X_{i-1}
             for k in range(f):
+                features.append(col[i-k-1][1])
+            # Ajoute X_{i-1-h} ... X_{i-1}
+            for k in range(h):
                 features.append(col[i-k-1][2])
             X.append(features)
         if train:
@@ -125,7 +128,6 @@ class ModelePrediction:
                 print("Erreur : Le nombre de caractéristiques d'entraînement ne correspond pas au nombre de caractéristiques de test.")
                 exit(1)
             
-    
     def entrainer(self):
         raise NotImplementedError
     

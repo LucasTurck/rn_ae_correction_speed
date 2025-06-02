@@ -30,11 +30,11 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description='Random Forest Model Training and Evaluation')
-    parser.add_argument('--E', type=int, default=145, help='Experiment number to load data for')
-    parser.add_argument('--num_sonde_train', type=int, default=0, help='Number of the probes to use in the model')
-    parser.add_argument('--num_sonde_test', type=int, default=1, help='Number of the probes to use in the model for testing')
-    parser.add_argument('--nb_training', type=int, default=1000, help='Number of training samples to use, -1 for all')
-    parser.add_argument('--nb_test', type=int, default=-1, help='Number of test samples to use, -1 for all')
+    parser.add_argument('--E', type=int, help='Experiment number to load data for')
+    parser.add_argument('--num_sonde_train', type=int, help='Number of the probes to use in the model')
+    parser.add_argument('--num_sonde_test', type=int, help='Number of the probes to use in the model for testing')
+    parser.add_argument('--nb_training', type=int, help='Number of training samples to use, -1 for all')
+    parser.add_argument('--nb_test', type=int, help='Number of test samples to use, -1 for all')
     args = parser.parse_args()
     args_dict = args_to_dict(args)
 
