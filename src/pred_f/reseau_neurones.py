@@ -1,4 +1,4 @@
-from prediction_f import ModelePrediction, plot_predictions, args_to_dict
+from pred_f.prediction_f import ModelePrediction, plot_predictions, args_to_dict
 from dir import MOD_PERSO_DIRECTORY
 import datetime
 import hashlib
@@ -243,6 +243,23 @@ class ModeleReseauNeurones(ModelePrediction):
                 self.r2train = scores.get("r2train")
                 self.r2test = scores.get("r2test")
 
+    def afichage_historique(self, erreur = 'loss'):
+        """
+        Affiche l'historique d'entraînement du modèle.
+        """
+        if self.history is not None:
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(12, 6))
+            plt.plot(self.history.history[erreur], label=erreur)
+            plt.title('Historique d\'entraînement')
+            plt.xlabel('Epochs')
+            plt.ylabel('Valeurs')
+            plt.legend()
+            plt.show(block = False)
+        else:
+            print("Aucun historique d'entraînement disponible.")
+    
+    
 if __name__ == "__main__":
     import argparse
 
@@ -293,6 +310,9 @@ if __name__ == "__main__":
     
     # Sauvegarder l'apprentissage
     model_nn.sauvegarder_apprentissage(MOD_PERSO_DIRECTORY)
+    
+    # Afficher l'historique d'entraînement
+    model_nn.afichage_historique()
     
     # Afficher les résultats
     model_nn.afficher()

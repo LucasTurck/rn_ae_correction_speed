@@ -34,14 +34,25 @@ class ModelePrediction:
         Initialise les paramètres du modèle de prédiction.
         Définit les paramètres par défaut pour l'entraînement et la prédiction.
         """
-        self.parameters['E'] = self.parameters.get('E', 145)
+        self.parameters['E'] = self.parameters.get('E', 125)
         self.parameters['num_sonde_train'] = self.parameters.get('num_sonde_train', 0)
         self.parameters['num_sonde_test'] = self.parameters.get('num_sonde_test', 1)
         self.parameters['nb_training'] = self.parameters.get('nb_training', -1)
         self.parameters['nb_test'] = self.parameters.get('nb_test', 100)
         self.parameters['prediction'] = self.parameters.get('prediction', [0, 0, 0])
-        
-    def remplissage_donnees(self, train = True):
+        self.parameters['y'] = self.parameters.get('y', 1)
+
+    def set_parameters(self, parameters):
+        """
+        Met à jour les paramètres du modèle de prédiction.
+        Args:
+            parameters (dict): Dictionnaire contenant les paramètres à mettre à jour.
+        """
+        for key, value in parameters.items():
+            self.parameters[key] = value
+        self.init_parameters()
+
+    def remplissage_donnees(self, train=True):
         """
         Remplit les données d'entraînement pour la prédiction à partir des fichiers de données de sonde.
         Cette méthode lit les données d'une sonde spécifique à partir d'un fichier, prépare les caractéristiques (features) et les cibles (targets) pour l'entraînement d'un modèle de prédiction, en tenant compte des paramètres de fenêtre de prédiction définis dans `self.prediction`.
@@ -108,12 +119,12 @@ class ModelePrediction:
         if train:
             # Entraînement
             self.X_train = np.array(X)
-            self.y_train = np.array([col[i][1] for i in range(max(p, f), len(col))])
+            self.y_train = np.array([col[i][self.parameters['y']] for i in range(max(p, f, h), len(col))])
         else:
             # Test
             self.X_test = np.array(X)
-            self.y_test = np.array([col[i][1] for i in range(max(p, f), len(col))])
-        
+            self.y_test = np.array([col[i][self.parameters['y']] for i in range(max(p, f, h), len(col))])
+
         # print(f"Nombre d'échantillons d'entraînement : {len(self.X_train)}")
         # print(f"Nombre de caractéristiques d'entraînement : {self.X_train.shape[1]}")
         # print(f"Nombre de cibles d'entraînement : {len(self.y_train)}")
