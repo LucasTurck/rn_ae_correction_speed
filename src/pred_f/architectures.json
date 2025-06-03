@@ -76,6 +76,7 @@
         "layers": [
             {"type": "Reshape", "target_shape": 1},
             {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "Flatten"},
             {"type": "GRU", "units": 50, "return_sequences": true},
             {"type": "GRU", "units": 25},
             {"type": "Dense", "units": 1}

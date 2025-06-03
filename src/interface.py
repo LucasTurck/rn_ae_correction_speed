@@ -14,7 +14,12 @@ class UIparams(ttk.Frame):
     def __init__(self, root, controller):
         super().__init__(root)
         self.controller = controller
+        
         dir_params = os.path.join(RDN_DIRECTORY, "last_config.json")
+        if not os.path.exists(dir_params):
+            dir_params = os.path.join(RDN_DIRECTORY, "default_config.json")
+        if not os.path.exists(dir_params):
+            raise FileNotFoundError(f"Le fichier de configuration {dir_params} n'existe pas.")
         with open(dir_params, 'r') as file:
             self.params = json.load(file)
         self.archi_var = tk.StringVar(value=self.params.get('architecture', 'dense_simple'))
@@ -138,14 +143,6 @@ class UIparams(ttk.Frame):
 
         self.controller.afficher_resultats()
     
-class UINetwork(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        
-        ttk.Label(self, text="Ici tu peux créer, entraîner et afficher le réseau").pack(pady=10)
-        ttk.Button(self, text="Retour aux paramètres", command=lambda: controller.show_frame("UIparams")).pack(pady=10)
-
 class UIModelSelector(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -269,7 +266,7 @@ class MainApp(tk.Tk):
         container = ttk.Frame(self)
         container.pack(fill="both", expand=True)
 
-        for F in (UIparams, UINetwork, UIModelSelector):
+        for F in (UIparams, UIModelSelector):
             frame = F(container, self)
             self.frames[F.__name__] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -330,6 +327,32 @@ class MainApp(tk.Tk):
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
         ttk.Button(results_window, text="Fermer", command=results_window.destroy).pack(pady=10)
+        plt.close(fig)
+
+    def afficher_historique(self, erreur = 'loss'):
+        # Afficher les résultats dans une nouvelle fenêtre
+        results_window = tk.Toplevel(self)
+        results_window.title("Résultats")
+        
+        fig, ax = plt.subplots()
+        if erreur == 'loss':
+            ax.plot(self.model_Rdn.history.history['loss'], label='train_loss')
+            ax.plot(self.model_Rdn.history.history['val_loss'], label='val_loss')
+        else:
+            ax.plot(self.model_Rdn.history.history['mae'], label='train_mae')
+            ax.plot(self.model_Rdn.history.history['val_mae'], label='val_mae')
+
+        ax.set_title("Historique d'entraînement")
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Erreur")
+        ax.legend()
+
+        canvas = FigureCanvasTkAgg(fig, master=results_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        ttk.Button(results_window, text="Fermer", command=results_window.destroy).pack(pady=10)
+        plt.close(fig)
 
 if __name__ == "__main__":
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())

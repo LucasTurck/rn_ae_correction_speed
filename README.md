@@ -2,12 +2,16 @@
 Apprentissage non supervisé pour la correction des mesures de vitesse en écoulement turbulent  par anémométrie thermique deux composantes
 
 # Installation 
-Avant de lancer le script, il faut installer les bibliothèques nécessaires (le script a été testé avec Python 3.8.10) :
+Avant de lancer le script, il faut installer les bibliothèques nécessaires (le script a été testé avec Python 3.8.10, après verification il est impossible d'utiliser tensorflow pour des versions de Python supérieures à 3.8) :
 
+- numpy : 
+    pip install numpy
+- matplotlib : 
+    pip install matplotlib
 - tensorflow : 
     pip install tensorflow
-- keras : 
-    pip install keras
+- scikit-learn : 
+    pip install scikit-learn
 - tqdm ( pour la barre de progression) : 
     pip install tqdm
 
@@ -16,8 +20,8 @@ Pour lancer le script, il suffit de se placer dans le repertoire du projet : rn_
 
 - pour l'apprentissage du réseau de neurones : 
     python .\src\pred_f\reseau_neurones.py
-- pour le random forest : 
-    python .\src\pred_f\random_forest.py
+- pour l'interface graphique : 
+    python .\src\pred_f\interface.py
 
 ## paramètres
 tous les paramètres sont à rajouter après la commande python avec '--' avant le nom du paramètre, par exemple :

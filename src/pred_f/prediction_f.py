@@ -104,7 +104,7 @@ class ModelePrediction:
         f = self.parameters['prediction'][1]
         h = self.parameters['prediction'][2]
         X = []
-        for i in range(max(p, f), len(col)):
+        for i in range(max(p, f, h), len(col)):
             features = [col[i][0]]
             # Ajoute X_{i-p} ... X_{i}
             for k in range(p):
@@ -130,14 +130,14 @@ class ModelePrediction:
         # print(f"Nombre de caractéristiques d'entraînement : {self.X_train.shape[1]}")
         # print(f"Nombre de cibles d'entraînement : {len(self.y_train)}")
         if train and len(self.X_train) != len(self.y_train):
-            print("Erreur : Le nombre d'échantillons d'entraînement ne correspond pas au nombre de cibles.")
+            print("remplissage_donnees - Erreur : Le nombre d'échantillons d'entraînement ne correspond pas au nombre de cibles.")
             exit(1)
         if not train and self.X_test is not None and len(self.X_test) != len(self.y_test):
-            print("Erreur : Le nombre d'échantillons de test ne correspond pas au nombre de cibles.")
+            print("remplissage_donnees - Erreur : Le nombre d'échantillons de test ne correspond pas au nombre de cibles.")
             exit(1)
-        if self.X_train is not None and self.X_test is not None:
+        if self.X_train is not None and self.X_test is not None and not train:
             if self.X_train.shape[1] != self.X_test.shape[1]:
-                print("Erreur : Le nombre de caractéristiques d'entraînement ne correspond pas au nombre de caractéristiques de test.")
+                print("remplissage_donnees - Erreur : Le nombre de caractéristiques d'entraînement ne correspond pas au nombre de caractéristiques de test.")
                 exit(1)
             
     def entrainer(self):
