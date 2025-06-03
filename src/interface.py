@@ -86,7 +86,13 @@ class UIparams(ttk.Frame):
         ttk.Button(self, text="Enregistrer les paramètres", command=self.save_params).pack()
         
         # Bouton pour compiler le reseau
-        ttk.Button(self, text="Compiler le réseau", command=lambda: self.controller.compile_model()).pack()
+        ttk.Button(self, text="Compiler le réseau", command=lambda: self.controller.compile_model(params=self.params)).pack()
+        
+        # Bouton pour afficher le résultat
+        ttk.Button(self, text="Afficher les résultats", command=self.controller.afficher_resultats).pack()
+
+        # Bouton pour aficher les résultats du réseau en changeant les données de test
+        ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.run_prediction()).pack(pady=10)
 
         # Bouton pour aller à l'interface de sélection du modèle
         ttk.Button(self, text="Sélectionner un modèle", command=lambda: self.controller.show_frame("UIModelSelector")).pack()
@@ -119,19 +125,38 @@ class UIparams(ttk.Frame):
         
         self.controller.set_params(params=self.params)
     
+    def run_prediction(self):
+
+        self.params['num_sonde_test'] = int(self.sonde_test_var.get())
+        self.params['nb_test'] = int(self.nb_test_var.get())
+        
+        self.controller.set_params(self.params)
+        self.controller.remplissage_donnees(train=False)
+        self.controller.predire()
+
+        print(f"R² pour le test : {self.controller.evaluer()}")
+
+        self.controller.afficher_resultats()
+    
 class UINetwork(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+        
         ttk.Label(self, text="Ici tu peux créer, entraîner et afficher le réseau").pack(pady=10)
         ttk.Button(self, text="Retour aux paramètres", command=lambda: controller.show_frame("UIparams")).pack(pady=10)
 
 class UIModelSelector(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
+        # Bouton pour revenir aux paramètres
+        ttk.Button(self, text="Retour aux paramètres", command=lambda: controller.show_frame("UIparams")).pack(pady=10) 
         self.controller = controller
         self.archi_var = tk.StringVar()
         self.run_var = tk.StringVar()
+        self.params = None
+        self.sonde_test_var = None
+        self.nb_test_var = None
 
         # Premier menu déroulant : architectures
         ttk.Label(self, text="Architecture :").pack()
@@ -148,9 +173,7 @@ class UIModelSelector(ttk.Frame):
         
         # Bonton de selection : 
         ttk.Button(self, text="Sélectionner le modèle", command=self.select_model).pack(pady=10)
-        
-        # Bouton pour revenir aux paramètres
-        ttk.Button(self, text="Retour aux paramètres", command=lambda: controller.show_frame("UIparams")).pack(pady=10)    
+           
 
     def populate_architectures(self):
         # Liste les dossiers dans MOD_DIRECTORY
@@ -200,11 +223,40 @@ class UIModelSelector(ttk.Frame):
                 with open(config_path, "r") as f:
                     config = json.load(f)
                 self.controller.set_params(config)
+                self.controller.remplissage_donnees(train=True)
+                self.controller.charger_apprentissage(os.path.join(MOD_DIRECTORY, archi, run))
+                
+                self.params = config
+                self.sonde_test_var = tk.StringVar(value=self.params.get('num_sonde_test', 0))
+                self.nb_test_var = tk.StringVar(value=self.params.get('nb_test', 1000))
+
+                ttk.Label(self, text="Numéro de la sonde de test :").pack()
+                ttk.Entry(self, textvariable=self.sonde_test_var).pack()
+
+                ttk.Label(self, text="Nombre de tests :").pack()
+                ttk.Entry(self, textvariable=self.nb_test_var).pack()
+                
+                ttk.Button(self, text="Lancer la prédiction", command=self.run_prediction).pack(pady=10)
+                
+
             else:
                 print("Erreur : Fichier de configuration introuvable.")
         else:
             print("Erreur : Aucune exécution sélectionnée.")
+        
+    def run_prediction(self):
 
+        self.params['num_sonde_test'] = int(self.sonde_test_var.get())
+        self.params['nb_test'] = int(self.nb_test_var.get())
+        
+        self.controller.set_params(self.params)
+        self.controller.remplissage_donnees(train=False)
+        self.controller.predire()
+
+        print(f"R² pour le test : {self.controller.evaluer()}")
+
+        self.controller.afficher_resultats()
+        
 class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -212,7 +264,7 @@ class MainApp(tk.Tk):
         self.geometry("500x600")
         self.frames = {}
         
-        self.model_Rdn = None
+        self.model_Rdn = ModeleReseauNeurones()
 
         container = ttk.Frame(self)
         container.pack(fill="both", expand=True)
@@ -232,24 +284,52 @@ class MainApp(tk.Tk):
     def set_params(self, params):
         self.model_Rdn.set_parameters(params)
     
+    def remplissage_donnees(self, train=True):
+        self.model_Rdn.remplissage_donnees(train=train)
+        
+    def charger_apprentissage(self, directory):
+        self.model_Rdn.charger_apprentissage(directory)
+    
+    def predire(self):
+        self.model_Rdn.predire()
+    
+    def evaluer(self):
+        return self.model_Rdn.evaluer()
+    
     def compile_model(self, params):
-        self.model_Rdn = ModeleReseauNeurones(params=params)
+        self.model_Rdn.set_parameters(parameters=params)
         self.model_Rdn.remplissage_donnees()
         self.model_Rdn.create_reseau()
         self.model_Rdn.entrainer()
-        self.model_Rdn.R2entrainement()
+        print(f"R² pour l'entraînement : {self.model_Rdn.R2entrainement()}")
+        # self.model_Rdn.R2entrainement()
         
-        self.model_Rdn.remplissage_donnees(train=False)
-        self.model_Rdn.predire()
-        self.model_Rdn.evaluer()
+        # self.model_Rdn.remplissage_donnees(train=False)
+        # self.model_Rdn.predire()
+        # print(f"R² pour le test : {self.model_Rdn.evaluer()}")
+        # self.model_Rdn.evaluer()
         
         self.model_Rdn.sauvegarder_apprentissage(MOD_PERSO_DIRECTORY)
         
+        self.afficher_resultats(test=False)
+
+    def afficher_resultats(self, test=True):
         
+        # Afficher les résultats dans une nouvelle fenêtre
+        results_window = tk.Toplevel(self)
+        results_window.title("Résultats")
         
+        fig, ax = plt.subplots()
+        if test:
+            plot_predictions(self.model_Rdn.X_test, self.model_Rdn.y_test, self.model_Rdn.y_pred_test, ax=ax)
+        else:
+            plot_predictions(self.model_Rdn.X_train, self.model_Rdn.y_train, self.model_Rdn.y_pred_train, ax=ax)
+
+        canvas = FigureCanvasTkAgg(fig, master=results_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-    
-    
+        ttk.Button(results_window, text="Fermer", command=results_window.destroy).pack(pady=10)
 
 if __name__ == "__main__":
     app = MainApp()

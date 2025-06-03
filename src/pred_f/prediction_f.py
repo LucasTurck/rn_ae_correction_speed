@@ -27,7 +27,7 @@ class ModelePrediction:
         self.y_test = None
         self.y_pred_test = None
         self.r2test = -1
-        self.init_parameters()
+        # self.init_parameters()
 
     def init_parameters(self):
         """
@@ -124,6 +124,7 @@ class ModelePrediction:
             # Test
             self.X_test = np.array(X)
             self.y_test = np.array([col[i][self.parameters['y']] for i in range(max(p, f, h), len(col))])
+            self.y_pred_test = None
 
         # print(f"Nombre d'échantillons d'entraînement : {len(self.X_train)}")
         # print(f"Nombre de caractéristiques d'entraînement : {self.X_train.shape[1]}")
@@ -183,7 +184,7 @@ class ModelePrediction:
         raise NotImplementedError
 
 
-def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True):
+def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True, ax=None):
     """
     Plots predicted values against true values for a regression task.
 
@@ -219,7 +220,10 @@ def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True):
     # print("plot_predictions - Nombre de prédictions :", len(y_pred))
     # print("plot_predictions - Nombre de cibles :", len(y))
     # print("plot_predictions - Nombre de caractéristiques :", X.shape)
-    plt.figure(figsize=(8, 6))
+    if ax is None:
+        plt.figure(figsize=(8, 6))
+    else:
+        plt.sca(ax)
     plt.scatter(X, y, color='blue', label='Données réelles', alpha=0.5)
     plt.scatter(X, y_pred, color='red', label='Prédictions', alpha=0.5)
     plt.xlabel("Première composante (u)")
@@ -227,7 +231,15 @@ def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True):
     plt.title(title)
     plt.legend(title=f"R2 = {r2_score(y, y_pred):.5f}")
     plt.grid(True)
-    plt.show(block=block)
+    if ax is None:
+        plt.tight_layout()
+        plt.show()
+    else:
+        ax.set_title(title)
+        ax.legend(title=f"R2 = {r2_score(y, y_pred):.5f}")
+        ax.grid(True)
+        plt.draw()
+    # plt.show(block=block)
 
 def args_to_dict(args):
     """
