@@ -91,5 +91,68 @@
             {"type": "Dense", "units": 32, "activation": "relu"},
             {"type": "Dense", "units": 1}
         ]
+    },
+    {
+        "name": "deep_lstm_bn_dropout",
+        "layers": [
+            {"type": "LSTM", "units": 128, "return_sequences": true, "recurrent_regularizer": "l2", "kernel_regularizer": "l2"},
+            {"type": "BatchNormalization"},
+            {"type": "Dropout", "rate": 0.3},
+            {"type": "LSTM", "units": 64, "return_sequences": true, "recurrent_regularizer": "l2"},
+            {"type": "BatchNormalization"},
+            {"type": "Dropout", "rate": 0.3},
+            {"type": "LSTM", "units": 32},
+            {"type": "BatchNormalization"},
+            {"type": "Dense", "units": 32, "activation": "relu", "kernel_regularizer": "l2"},
+            {"type": "Dropout", "rate": 0.2},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "bidirectional_gru_bn",
+        "layers": [
+            {"type": "Bidirectional", "layer": {"type": "GRU", "units": 128, "return_sequences": true}},
+            {"type": "BatchNormalization"},
+            {"type": "Dropout", "rate": 0.4},
+            {"type": "Bidirectional", "layer": {"type": "GRU", "units": 64}},
+            {"type": "BatchNormalization"},
+            {"type": "Dense", "units": 32, "activation": "relu", "kernel_regularizer": "l1_l2"},
+            {"type": "Dropout", "rate": 0.2},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "hybrid_cnn_lstm_gru",
+        "layers": [
+            {"type": "Reshape", "target_shape": 1},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same", "kernel_regularizer": "l2"},
+            {"type": "BatchNormalization"},
+            {"type": "Conv1D", "filters": 128, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "BatchNormalization"},
+            {"type": "Flatten"},
+            {"type": "LSTM", "units": 100, "return_sequences": true, "recurrent_dropout": 0.2},
+            {"type": "BatchNormalization"},
+            {"type": "GRU", "units": 50},
+            {"type": "Dropout", "rate": 0.3},
+            {"type": "Dense", "units": 32, "activation": "relu", "kernel_regularizer": "l2"},
+            {"type": "BatchNormalization"},
+            {"type": "Dense", "units": 1}
+        ]
+    },
+    {
+        "name": "residual_gru_network",
+        "layers": [
+            {"type": "GRU", "units": 128, "return_sequences": true},
+            {"type": "BatchNormalization"},
+            {"type": "Dropout", "rate": 0.3},
+            {"type": "GRU", "units": 128, "return_sequences": true},
+            {"type": "BatchNormalization"},
+            {"type": "Add", "inputs": ["layer_0", "layer_3"]},
+            {"type": "GRU", "units": 64},
+            {"type": "BatchNormalization"},
+            {"type": "Dropout", "rate": 0.3},
+            {"type": "Dense", "units": 32, "activation": "relu", "kernel_regularizer": "l2"},
+            {"type": "Dense", "units": 1}
+        ]
     }
 ]

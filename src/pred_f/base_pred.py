@@ -58,11 +58,11 @@ class ModeleNaif(ModelePrediction):
         super().__init__('naif', parameters)
 
     def entrainer(self):
-        self.y_pred_train = self.X_train.flatten()
+        self.y_pred_train = self.X_train[:, -1].flatten()  # Utilise la dernière colonne de X_train comme prédiction
 
     def predire(self):
         if self.X_test is not None:
-            self.y_pred_test = self.X_test.flatten()
+            self.y_pred_test = self.X_test[:, -1].flatten()  # Utilise la dernière colonne de X_test comme prédiction
         else:
             self.y_pred_test = None
 
@@ -100,7 +100,8 @@ if __name__ == "__main__":
     parser.add_argument('--nb_test', type=int, help='Number of test samples to use, -1 for all')
     parser.add_argument('--methode', type=str, default='lineaire', choices=['lineaire', 'polynomiale', 'naive', 'aleatoire'], help='Method of regression to use')
     parser.add_argument('--degree', type=int, help='Degree of the polynomial for regression')
-    parser.add_argument('--prediction', type=int, nargs=2, help='Prediction parameters [p, f] where p is the number of previous samples of u and f is the number of previous samples of v to use')
+    parser.add_argument('--prediction', type=int, nargs=3, help='Prediction parameters [p, f] where p is the number of previous samples of u and f is the number of previous samples of v to use')
+    parser.add_argument('--y', type=int, help='Name of the variable to predict (e.g., "u", "v")')
     args = parser.parse_args()
     args_dict = args_to_dict(args)
 
@@ -116,19 +117,20 @@ if __name__ == "__main__":
     else:
         raise ValueError("Méthode inconnue. Choisissez parmi 'lineaire', 'polynomiale', 'naive', 'aleatoire'.")
 
+    model.init_parameters()
 
     model.remplissage_donnees()
 
     model.entrainer()
-    print(f"R² pour l'entraînement : {model.R2entrainement()}")
-    
+    print(f"R² pour l'entraînement : {model.evaluer(train=True)}")
+
     # Remplir les données de test
     model.remplissage_donnees(train=False)
 
     # Prédire les valeurs sur les données de test
     model.predire()
-    
-    print(f"R² pour le test : {model.evaluer()}")
-    
+
+    print(f"R² pour le test : {model.evaluer(train=False)}")
+
     # Afficher les résultats
     model.afficher()

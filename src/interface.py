@@ -34,6 +34,7 @@ class UIparams(ttk.Frame):
         self.epochs_var = tk.StringVar(value=self.params.get('epochs', 10))
         self.batch_size_var = tk.StringVar(value=self.params.get('batch_size', 32))
         self.y_var = tk.StringVar(value=self.params.get('y', 1))
+        self.erreur_var = tk.StringVar(value=self.params.get('erreur', 'mae'))  # Variable pour l'erreur à afficher dans l'historique
         self.create_widgets()
 
     def create_widgets(self):
@@ -46,6 +47,11 @@ class UIparams(ttk.Frame):
         names_archi = [arch['name'] for arch in architectures]
         ttk.Label(self, text="Architecture :").pack()
         ttk.Combobox(self, textvariable=self.archi_var, values=names_archi, state="readonly").pack()
+        
+        ## Erreur :
+        ttk.Label(self, text="Erreur :").pack()
+        names_loss = ['mae', 'mse', 'log_cosh', tf.keras.losses.Huber(delta=1.0)]  # Liste des erreurs possibles à afficher
+        ttk.Combobox(self, values=names_loss, textvariable=self.erreur_var).pack()
 
         ## data :
         ### E :
@@ -93,8 +99,8 @@ class UIparams(ttk.Frame):
         # Bouton pour compiler le reseau
         ttk.Button(self, text="Compiler le réseau", command=lambda: self.controller.compile_model(params=self.params)).pack()
         
-        # Bouton pour afficher le résultat
-        ttk.Button(self, text="Afficher les résultats", command=self.controller.afficher_resultats).pack()
+        # Bouton pour afficher l'historique d'entraînement
+        ttk.Button(self, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique(erreur=self.erreur_var.get())).pack()
 
         # Bouton pour aficher les résultats du réseau en changeant les données de test
         ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.run_prediction()).pack(pady=10)
@@ -118,6 +124,7 @@ class UIparams(ttk.Frame):
         self.params['y'] = int(self.y_var.get())
         self.params['epochs'] = int(self.epochs_var.get())
         self.params['batch_size'] = int(self.batch_size_var.get())
+        self.params['loss'] = self.erreur_var.get()  # Enregistrer l'erreur sélectionnée pour l'historique
 
         # Enregistrer dans le fichier de configuration
         dir_params = os.path.join(RDN_DIRECTORY, "last_config.json")
@@ -139,7 +146,7 @@ class UIparams(ttk.Frame):
         self.controller.remplissage_donnees(train=False)
         self.controller.predire()
 
-        print(f"R² pour le test : {self.controller.evaluer()}")
+        print(f"R² pour le test : {self.controller.evaluer(train=False)}")
 
         self.controller.afficher_resultats()
     
@@ -250,7 +257,7 @@ class UIModelSelector(ttk.Frame):
         self.controller.remplissage_donnees(train=False)
         self.controller.predire()
 
-        print(f"R² pour le test : {self.controller.evaluer()}")
+        print(f"R² pour le test : {self.controller.evaluer(train=False)}")
 
         self.controller.afficher_resultats()
         
@@ -258,8 +265,9 @@ class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Interface Réseau de Neurones")
-        self.geometry("500x600")
+        self.geometry("500x700")
         self.frames = {}
+        self.erreur_var = tk.StringVar(value='loss')  # Variable pour l'erreur à afficher dans l'historique
         
         self.model_Rdn = ModeleReseauNeurones()
 
@@ -290,15 +298,15 @@ class MainApp(tk.Tk):
     def predire(self):
         self.model_Rdn.predire()
     
-    def evaluer(self):
-        return self.model_Rdn.evaluer()
+    def evaluer(self, train=True):
+        return self.model_Rdn.evaluer(train=train)
     
     def compile_model(self, params):
         self.model_Rdn.set_parameters(parameters=params)
         self.model_Rdn.remplissage_donnees()
         self.model_Rdn.create_reseau()
         self.model_Rdn.entrainer()
-        print(f"R² pour l'entraînement : {self.model_Rdn.R2entrainement()}")
+        print(f"R² pour l'entraînement : {self.model_Rdn.evaluer(train=True)}")
         # self.model_Rdn.R2entrainement()
         
         # self.model_Rdn.remplissage_donnees(train=False)
@@ -329,30 +337,114 @@ class MainApp(tk.Tk):
         ttk.Button(results_window, text="Fermer", command=results_window.destroy).pack(pady=10)
         plt.close(fig)
 
-    def afficher_historique(self, erreur = 'loss'):
-        # Afficher les résultats dans une nouvelle fenêtre
+    def afficher_historique(self, erreur):
+        # Créer une fenêtre de résultats avec plus d'options
         results_window = tk.Toplevel(self)
-        results_window.title("Résultats")
+        results_window.title("Historique d'entraînement")
+        results_window.geometry("800x600")  # Taille plus grande
         
-        fig, ax = plt.subplots()
-        if erreur == 'loss':
-            ax.plot(self.model_Rdn.history.history['loss'], label='train_loss')
-            ax.plot(self.model_Rdn.history.history['val_loss'], label='val_loss')
-        else:
-            ax.plot(self.model_Rdn.history.history['mae'], label='train_mae')
-            ax.plot(self.model_Rdn.history.history['val_mae'], label='val_mae')
+        # Frame pour les contrôles
+        control_frame = ttk.Frame(results_window)
+        control_frame.pack(fill="x", padx=10, pady=5)
+        
+        # Variable pour l'échelle
+        scale_var = tk.StringVar(value="linear")
+        start_epoch_var = tk.IntVar(value=2)
+        end_epoch_var = tk.IntVar(value=len(self.model_Rdn.history.history.get(erreur, [])) - 1)
+        
+        # Création de la figure
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # Fonction de mise à jour du graphique
+        def update_graph():
+            import numpy as np
+            ax.clear()
+            start = start_epoch_var.get()
+            end = end_epoch_var.get()
+            # Récupérer et tracer les données d'entraînement
+            if erreur in self.model_Rdn.history.history:
+                y_train = self.model_Rdn.history.history[erreur]
+                y_train_safe = [v if v != 0 else 1e-8 for v in y_train[start:end]]
+                ax.plot(y_train_safe, label='Entraînement', linewidth=2, marker='o', markersize=3)
+                
+                # Marquer le point minimal
+                min_idx = np.argmin(y_train_safe)
+                ax.scatter(min_idx, y_train_safe[min_idx], color='red', s=100, 
+                        label=f'Min: {y_train_safe[min_idx]:.5f} (epoch {min_idx})')
+            
+            # Récupérer et tracer les données de validation
+            val_key = f'val_{erreur}'
+            if val_key in self.model_Rdn.history.history:
+                y_val = self.model_Rdn.history.history[val_key]
+                y_val_safe = [v if v != 0 else 1e-8 for v in y_val[start:end]]
+                ax.plot(y_val_safe, label='Validation', linewidth=2, marker='x', markersize=3, alpha=0.8)
+                
+                # Marquer le point minimal de validation
+                min_val_idx = np.argmin(y_val_safe)
+                ax.scatter(min_val_idx, y_val_safe[min_val_idx], color='green', s=100, 
+                        label=f'Min val: {y_val_safe[min_val_idx]:.5f} (epoch {min_val_idx})')
+    
+            # Paramétrage du graphique
+            ax.set_title(f"Historique d'entraînement - {erreur}", fontsize=14)
+            ax.set_xlabel("Epoch", fontsize=12)
+            ax.set_ylabel(f"{erreur.upper()}", fontsize=12)
+            ax.grid(True, linestyle='--', alpha=0.7)
+            ax.set_yscale(scale_var.get())
 
-        ax.set_title("Historique d'entraînement")
-        ax.set_xlabel("Epoch")
-        ax.set_ylabel("Erreur")
-        ax.legend()
 
+            # Ajouter une annotation pour la valeur finale
+            # if erreur in self.model_Rdn.history.history:
+            #     final_value = y_train_safe[-1]
+            #     ax.annotate(f'Valeur finale: {final_value:.5f}', 
+            #             xy=(len(y_train_safe)-1, final_value),
+            #             xytext=(len(y_train_safe)-20, final_value*1.1),
+            #             arrowprops=dict(arrowstyle='->'))
+            
+            ax.legend(loc='best')
+            canvas.draw()
+        
+        # Boutons de contrôle
+        ttk.Label(control_frame, text="Échelle:").pack(side="left")
+        ttk.Radiobutton(control_frame, text="Linéaire", variable=scale_var, 
+                    value="linear", command=update_graph).pack(side="left")
+        ttk.Radiobutton(control_frame, text="Logarithmique", variable=scale_var, 
+                    value="log", command=update_graph).pack(side="left")
+        ttk.Radiobutton(control_frame, text="Symétrique", variable=scale_var,
+                    value="symlog", command=update_graph).pack(side="left")
+        ttk.Radiobutton(control_frame, text="Logarithmique symétrique", variable=scale_var,
+                    value="logit", command=update_graph).pack(side="left")
+        ttk.Label(control_frame, text="Début:").pack(side="left")
+        ttk.Entry(control_frame, textvariable=start_epoch_var, width=5).pack(side="left")
+        ttk.Label(control_frame, text="Fin:").pack(side="left")
+        ttk.Entry(control_frame, textvariable=end_epoch_var, width=5).pack(side="left")
+        
+        # Bouton pour sauvegarder l'image
+        from tkinter import filedialog
+        def save_figure():
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".png",
+                filetypes=[("PNG", "*.png"), ("JPEG", "*.jpg"), ("PDF", "*.pdf")]
+            )
+            if file_path:
+                fig.savefig(file_path, dpi=300, bbox_inches="tight")
+        
+        ttk.Button(control_frame, text="Sauvegarder", command=save_figure).pack(side="right")
+        ttk.Button(control_frame, text="Fermer", command=results_window.destroy).pack(side="right", padx=10)
+    
+        # Canvas pour le graphique
         canvas = FigureCanvasTkAgg(fig, master=results_window)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        ttk.Button(results_window, text="Fermer", command=results_window.destroy).pack(pady=10)
-        plt.close(fig)
+        # Toolbar
+        from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+        toolbar = NavigationToolbar2Tk(canvas, results_window)
+        toolbar.update()
+        
+        # Afficher le graphique initial
+        update_graph()
+        
+        plt.close(fig)  # Fermer la figure matplotlib (pas la fenêtre tkinter)
 
 if __name__ == "__main__":
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())

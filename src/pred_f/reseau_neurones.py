@@ -126,6 +126,7 @@ class ModeleReseauNeurones(ModelePrediction):
         self.parameters["architecture"] = self.parameters.get("architecture", "dense_simple")
         self.parameters["epochs"] = self.parameters.get("epochs", 100)
         self.parameters["batch_size"] = self.parameters.get("batch_size", 64)
+        self.parameters['loss'] = self.parameters.get('loss', 'mse')
         print(f"Paramètres du modèle : {self.parameters}")
 
     def create_reseau(self):
@@ -144,7 +145,7 @@ class ModeleReseauNeurones(ModelePrediction):
         self.model = build_model(self.X_train.shape[1:], architecture)
 
     def entrainer(self):
-        self.model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+        self.model.compile(optimizer='adam', loss=self.parameters['loss'], metrics=['mae'])
         self.history = self.model.fit(
             self.X_train, self.y_train, 
             epochs=self.parameters["epochs"], 
@@ -253,12 +254,16 @@ class ModeleReseauNeurones(ModelePrediction):
         Affiche l'historique d'entraînement du modèle.
         """
         if self.history is not None:
+            if erreur not in self.history.history:
+                print(f"Erreur : '{erreur}' n'est pas une clé valide dans l'historique d'entraînement.")
+                return
             import matplotlib.pyplot as plt
             plt.figure(figsize=(12, 6))
             plt.plot(self.history.history[erreur], label=erreur)
             plt.title('Historique d\'entraînement')
             plt.xlabel('Epochs')
             plt.ylabel('Valeurs')
+            plt.yscale('log')
             plt.legend()
             plt.show(block = False)
         else:
@@ -280,6 +285,7 @@ if __name__ == "__main__":
     parser.add_argument('--architecture', type=str, help='Name of the neural network architecture to use')
     parser.add_argument('--epochs', type=int, help='Number of epochs for training')
     parser.add_argument('--batch_size', type=int, help='Batch size for training')
+    parser.add_argument('--y', type=int, help='Index of the column to predict (0 for u, 1 for v)')
     args = parser.parse_args()
     args_dict = args_to_dict(args)
     
@@ -303,16 +309,16 @@ if __name__ == "__main__":
     model_nn.entrainer()
 
 
-    print(f"R² pour l'entraînement : {model_nn.R2entrainement()}")
+    print(f"R² pour l'entraînement : {model_nn.evaluer(train=True)}")
     
     # Remplir les données de test
     model_nn.remplissage_donnees(train=False)
 
     # Prédire les valeurs sur les données de test
     model_nn.predire()
-    
-    print(f"R² pour le test : {model_nn.evaluer()}")
-    
+
+    print(f"R² pour le test : {model_nn.evaluer(train=False)}")
+
     # Sauvegarder l'apprentissage
     model_nn.sauvegarder_apprentissage(MOD_PERSO_DIRECTORY)
     

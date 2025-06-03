@@ -151,34 +151,24 @@ class ModelePrediction:
 
     def predire(self, X):
         raise NotImplementedError
-    
-    def R2entrainement(self):
-        """
-        Calculate and return the R² (coefficient of determination) score for the training predictions.
-        Returns:
-            float or None: The R² score of the training predictions if available and valid,
-            otherwise None. Prints an error message if the number of predictions does not
-            match the number of targets.
-        """
-        if self.y_pred_train is not None:
-            # print("R² - Nombre de prédictions d'entraînement :", len(self.y_pred_train))
-            # print("R² - Nombre de cibles d'entraînement :", len(self.y_train))
 
-            if len(self.y_pred_train) != len(self.y_train):
-                print("Erreur : Le nombre de prédictions d'entraînement ne correspond pas aux cibles.")
-                return None
-            self.r2train = r2_score(self.y_train, self.y_pred_train)
-            return self.r2train
-        return None
-
-    def evaluer(self):
+    def evaluer(self, train=True):
         # print("evaluer - Nombre de prédictions de test :", len(self.y_pred_test) if self.y_pred_test is not None else "Aucune")
         # print("evaluer - Nombre de cibles de test :", len(self.y_test) if self.y_test is not None else "Aucune")
-        if self.y_pred_test is not None:
-            if self.y_test is not None:
-                self.r2test = r2_score(self.y_test, self.y_pred_test)
-                return self.r2test
-        return None
+        if train:
+            if self.y_pred_train is not None and self.y_train is not None:
+                if len(self.y_pred_train) == len(self.y_train):
+                    self.r2train = r2_score(self.y_train, self.y_pred_train)
+                    return self.r2train
+            print("evaluer - Erreur : Le nombre de prédictions d'entraînement ne correspond pas aux cibles.")
+            return None
+        else:
+            if self.y_pred_test is not None and self.y_test is not None:
+                if len(self.y_pred_test) == len(self.y_test):
+                    self.r2test = r2_score(self.y_test, self.y_pred_test)
+                    return self.r2test
+            print("evaluer - Erreur : Le nombre de prédictions de test ne correspond pas aux cibles.")
+            return None
 
     def afficher(self):
         raise NotImplementedError
