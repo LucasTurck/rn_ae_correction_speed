@@ -2,6 +2,10 @@ from pred_f.prediction_f import ModelePrediction, plot_predictions, args_to_dict
 from dir import MOD_PERSO_DIRECTORY
 import datetime
 import hashlib
+try:
+    import intel_extension_for_tensorflow as itex
+except ImportError:
+    print("intel_extension_for_tensorflow non installé, optimisation Intel désactivée.")
 from tensorflow import keras
 from tensorflow.keras import layers
 from tqdm.keras import TqdmCallback
@@ -9,7 +13,8 @@ import re
 import json
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
-
+import tensorflow as tf
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 def build_model(input_shape, layer_defs):
     """

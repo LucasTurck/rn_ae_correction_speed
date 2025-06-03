@@ -332,5 +332,8 @@ class MainApp(tk.Tk):
         ttk.Button(results_window, text="Fermer", command=results_window.destroy).pack(pady=10)
 
 if __name__ == "__main__":
+    os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
+    os.environ["TF_NUM_INTRAOP_THREADS"] = str(os.cpu_count())
+    os.environ["TF_NUM_INTEROP_THREADS"] = str(os.cpu_count())
     app = MainApp()
     app.mainloop()

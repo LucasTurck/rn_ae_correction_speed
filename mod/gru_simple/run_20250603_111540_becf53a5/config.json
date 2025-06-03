@@ -1,0 +1,16 @@
+{
+  "architecture": "gru_simple",
+  "E": 125,
+  "num_sonde_train": 0,
+  "num_sonde_test": 1,
+  "nb_training": -1,
+  "nb_test": 100,
+  "prediction": [
+    0,
+    1,
+    0
+  ],
+  "epochs": 5000,
+  "batch_size": 64,
+  "y": 1
+}
