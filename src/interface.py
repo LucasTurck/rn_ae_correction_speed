@@ -34,7 +34,7 @@ class UIparams(ttk.Frame):
         self.epochs_var = tk.StringVar(value=self.params.get('epochs', 10))
         self.batch_size_var = tk.StringVar(value=self.params.get('batch_size', 32))
         self.y_var = tk.StringVar(value=self.params.get('y', 1))
-        self.erreur_var = tk.StringVar(value=self.params.get('erreur', 'mae'))  # Variable pour l'erreur à afficher dans l'historique
+        self.erreur_var = tk.StringVar(value=self.params.get('loss', 'mae'))  # Variable pour l'erreur à afficher dans l'historique
         self.create_widgets()
 
     def create_widgets(self):
@@ -50,8 +50,8 @@ class UIparams(ttk.Frame):
         
         ## Erreur :
         ttk.Label(self, text="Erreur :").pack()
-        names_loss = ['mae', 'mse', 'log_cosh', tf.keras.losses.Huber(delta=1.0)]  # Liste des erreurs possibles à afficher
-        ttk.Combobox(self, values=names_loss, textvariable=self.erreur_var).pack()
+        names_loss = NAMES_METRICS
+        ttk.Combobox(self, values=names_loss, textvariable=self.erreur_var, state="readonly").pack()
 
         ## data :
         ### E :
@@ -101,6 +101,9 @@ class UIparams(ttk.Frame):
         
         # Bouton pour afficher l'historique d'entraînement
         ttk.Button(self, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique(erreur=self.erreur_var.get())).pack()
+
+        # Bouton pour afficher les résultats de l'entraînement
+        ttk.Button(self, text="Afficher les résultats de l'entraînement", command=lambda: self.controller.afficher_resultats(test=False)).pack(pady=10)
 
         # Bouton pour aficher les résultats du réseau en changeant les données de test
         ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.run_prediction()).pack(pady=10)
@@ -316,7 +319,7 @@ class MainApp(tk.Tk):
         
         self.model_Rdn.sauvegarder_apprentissage(MOD_PERSO_DIRECTORY)
         
-        self.afficher_resultats(test=False)
+        # self.afficher_resultats(test=False)
 
     def afficher_resultats(self, test=True):
         
@@ -357,6 +360,7 @@ class MainApp(tk.Tk):
         
         # Fonction de mise à jour du graphique
         def update_graph():
+            erreur = self.erreur_var.get()
             import numpy as np
             ax.clear()
             start = start_epoch_var.get()
@@ -393,12 +397,12 @@ class MainApp(tk.Tk):
 
 
             # Ajouter une annotation pour la valeur finale
-            # if erreur in self.model_Rdn.history.history:
-            #     final_value = y_train_safe[-1]
-            #     ax.annotate(f'Valeur finale: {final_value:.5f}', 
-            #             xy=(len(y_train_safe)-1, final_value),
-            #             xytext=(len(y_train_safe)-20, final_value*1.1),
-            #             arrowprops=dict(arrowstyle='->'))
+            if erreur in self.model_Rdn.history.history:
+                final_value = y_train_safe[-1]
+                ax.annotate(f'Valeur finale: {final_value:.5f}', 
+                        xy=(len(y_train_safe)-1, final_value),
+                        xytext=(len(y_train_safe)-20, y_train_safe[start]),
+                        arrowprops=dict(arrowstyle='->'))
             
             ax.legend(loc='best')
             canvas.draw()
@@ -409,15 +413,18 @@ class MainApp(tk.Tk):
                     value="linear", command=update_graph).pack(side="left")
         ttk.Radiobutton(control_frame, text="Logarithmique", variable=scale_var, 
                     value="log", command=update_graph).pack(side="left")
-        ttk.Radiobutton(control_frame, text="Symétrique", variable=scale_var,
-                    value="symlog", command=update_graph).pack(side="left")
         ttk.Radiobutton(control_frame, text="Logarithmique symétrique", variable=scale_var,
                     value="logit", command=update_graph).pack(side="left")
         ttk.Label(control_frame, text="Début:").pack(side="left")
         ttk.Entry(control_frame, textvariable=start_epoch_var, width=5).pack(side="left")
-        ttk.Label(control_frame, text="Fin:").pack(side="left")
-        ttk.Entry(control_frame, textvariable=end_epoch_var, width=5).pack(side="left")
+        # ttk.Label(control_frame, text="Fin:").pack(side="left")
+        # ttk.Entry(control_frame, textvariable=end_epoch_var, width=5).pack(side="left")
         
+        ttk.Radiobutton(control_frame, text="mae", variable=self.erreur_var,
+                    value="mae", command=update_graph).pack(side="left")
+        ttk.Radiobutton(control_frame, text="mse", variable=self.erreur_var,
+                    value="mse", command=update_graph).pack(side="left")
+
         # Bouton pour sauvegarder l'image
         from tkinter import filedialog
         def save_figure():

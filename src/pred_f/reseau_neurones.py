@@ -16,6 +16,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
 import tensorflow as tf
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
+NAMES_METRICS = ["mse", "mae"]
+
 def build_model(input_shape, layer_defs):
     """
     Builds a Keras Sequential model based on the provided input shape and layer definitions.
@@ -145,7 +147,7 @@ class ModeleReseauNeurones(ModelePrediction):
         self.model = build_model(self.X_train.shape[1:], architecture)
 
     def entrainer(self):
-        self.model.compile(optimizer='adam', loss=self.parameters['loss'], metrics=['mae'])
+        self.model.compile(optimizer='adam', loss=self.parameters['loss'], metrics=NAMES_METRICS)
         self.history = self.model.fit(
             self.X_train, self.y_train, 
             epochs=self.parameters["epochs"], 
