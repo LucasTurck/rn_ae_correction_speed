@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from reed_data import lire_fichier_U
 from dir import DATA_DIRECTORY
 import numpy as np
+import gc
 
 """
 Module de prédiction pour les données de sonde.
@@ -28,6 +29,26 @@ class ModelePrediction:
         self.y_pred_test = None
         self.r2test = -1
         # self.init_parameters()
+
+    def copy_model(self):
+        """
+        Copie les paramètres du modèle de prédiction dans un nouveau modèle.
+        Retourne une nouvelle instance de ModelePrediction avec les mêmes paramètres.
+        """
+        import copy
+        parameters_copy = copy.deepcopy(self.parameters)
+        new_model = ModelePrediction(self.nom_modele, parameters_copy)
+
+        new_model.X_train = copy.deepcopy(self.X_train)
+        new_model.y_train = copy.deepcopy(self.y_train)
+        new_model.y_pred_train = copy.deepcopy(self.y_pred_train)
+        new_model.r2train = self.r2train
+        new_model.X_test = copy.deepcopy(self.X_test)
+        new_model.y_test = copy.deepcopy(self.y_test)
+        new_model.y_pred_test = copy.deepcopy(self.y_pred_test)
+        new_model.r2test = self.r2test
+
+        return new_model
 
     def init_parameters(self):
         """
@@ -248,3 +269,8 @@ def args_to_dict(args):
         A dictionary with argument names as keys and their values.
     """
     return {k: v for k, v in vars(args).items() if v is not None}
+
+def delete(model):
+    del model
+    gc.collect()
+    

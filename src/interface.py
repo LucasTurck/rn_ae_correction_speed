@@ -184,9 +184,6 @@ class UIModelSelector(ttk.Frame):
         # Bouton pour afficher l'historique d'entraînement
         ttk.Button(self, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique()).pack(pady=10)
         
-        # Bouton pour afficher les résultats de l'entraînement
-        ttk.Button(self, text="Afficher les résultats de l'entraînement", command=lambda: self.controller.afficher_resultats_train()).pack(pady=10)
-
         # Bouton pour afficher les résultats du test
         ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.controller.afficher_resultats_test()).pack(pady=10)
 

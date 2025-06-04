@@ -122,7 +122,13 @@ class ModeleReseauNeurones(ModelePrediction):
     def __init__(self, parameters=None):
         super().__init__('reseau_neurones', parameters)
         self.history = None
-        
+    
+    def copy_model(self):
+        new_model = super().copy_model()
+        new_model.model = keras.models.clone_model(self.model)
+        new_model.model.set_weights(self.model.get_weights())
+        return new_model
+
     def init_parameters(self):
         super().init_parameters()
         self.parameters["architecture"] = self.parameters.get("architecture", "dense_simple")
@@ -240,8 +246,11 @@ class ModeleReseauNeurones(ModelePrediction):
         # Charger l'historique d'entraînement (optionnel)
         chemin_historique = os.path.join(dossier, "historique.json")
         if os.path.exists(chemin_historique):
+            import types
             with open(chemin_historique, "r") as f:
-                self.history.history = json.load(f)
+                history_dict = json.load(f)
+            # Créer un objet factice avec un attribut .history
+            self.history = types.SimpleNamespace(history=history_dict)
 
         # Charger les scores R² (optionnel)
         chemin_scores = os.path.join(dossier, "scores.json")
