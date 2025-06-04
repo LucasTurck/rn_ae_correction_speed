@@ -269,8 +269,3 @@ def args_to_dict(args):
         A dictionary with argument names as keys and their values.
     """
     return {k: v for k, v in vars(args).items() if v is not None}
-
-def delete(model):
-    del model
-    gc.collect()
-    

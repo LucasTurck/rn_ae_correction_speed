@@ -2,10 +2,6 @@ from pred_f.prediction_f import ModelePrediction, plot_predictions, args_to_dict
 from dir import MOD_PERSO_DIRECTORY
 import datetime
 import hashlib
-try:
-    import intel_extension_for_tensorflow as itex
-except ImportError:
-    print("intel_extension_for_tensorflow non installé, optimisation Intel désactivée.")
 from tensorflow import keras
 from tensorflow.keras import layers
 from tqdm.keras import TqdmCallback
@@ -122,6 +118,22 @@ class ModeleReseauNeurones(ModelePrediction):
     def __init__(self, parameters=None):
         super().__init__('reseau_neurones', parameters)
         self.history = None
+
+    def clear(self):
+        self.model = None
+        self.X_train = None
+        self.y_train = None
+        self.X_test = None
+        self.y_test = None
+        self.y_pred_train = None
+        self.y_pred_test = None
+        self.history = None
+        import gc
+        gc.collect()
+        tf.keras.backend.clear_session()
+
+    def __str__(self):
+        return f"ModeleReseauNeurones(architecture={self.parameters['architecture']}, epochs={self.parameters['epochs']}, batch_size={self.parameters['batch_size']})"
     
     def copy_model(self):
         new_model = super().copy_model()

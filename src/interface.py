@@ -7,6 +7,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import json
 import os
+import threading
       
 
 class UIparams(ttk.Frame):
@@ -66,14 +67,6 @@ class UIparams(ttk.Frame):
         ttk.Label(self, text="Nombre de données d'entraînement :").pack()
         ttk.Entry(self, textvariable=self.nb_train_var).pack()
         
-        ### sonde test :
-        # ttk.Label(self, text="Sonde de test :").pack()
-        # ttk.Entry(self, textvariable=self.sonde_test_var).pack()
-
-        # ### nombres de données de test :
-        # ttk.Label(self, text="Nombre de données de test :").pack()
-        # ttk.Entry(self, textvariable=self.nb_test_var).pack()
-
         ## Prédiction :
         ttk.Label(self, text="Prédiction :").pack()
         ttk.Entry(self, textvariable=self.recursive_u_var).pack()
@@ -97,16 +90,16 @@ class UIparams(ttk.Frame):
         ttk.Button(self, text="Enregistrer les paramètres", command=self.save_params).pack()
         
         # Bouton pour compiler le reseau
-        ttk.Button(self, text="Compiler le réseau", command=lambda: self.controller.compile_model(params=self.params)).pack()
+        ttk.Button(self, text="Compiler le réseau", command=lambda: self.fenetre_compile()).pack()
         
         # Bouton pour afficher l'historique d'entraînement
-        ttk.Button(self, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique()).pack()
+        # ttk.Button(self, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique()).pack()
 
-        # Bouton pour afficher les résultats de l'entraînement
-        ttk.Button(self, text="Afficher les résultats de l'entraînement", command=lambda: self.controller.afficher_resultats_train()).pack(pady=10)
+        # # Bouton pour afficher les résultats de l'entraînement
+        # ttk.Button(self, text="Afficher les résultats de l'entraînement", command=lambda: self.controller.afficher_resultats_train()).pack(pady=10)
 
-        # Bouton pour aficher les résultats du réseau en changeant les données de test
-        ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.controller.afficher_resultats_test()).pack(pady=10)
+        # # Bouton pour aficher les résultats du réseau en changeant les données de test
+        # ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.controller.afficher_resultats_test()).pack(pady=10)
 
         # Bouton pour aller à l'interface de sélection du modèle
         ttk.Button(self, text="Sélectionner un modèle", command=lambda: self.controller.show_frame("UIModelSelector")).pack()
@@ -140,6 +133,10 @@ class UIparams(ttk.Frame):
         
         self.controller.set_params(params=self.params)
     
+    def fenetre_compile(self):
+        self.save_params()  # Enregistrer les paramètres avant de compiler
+        UICompileModel(self, self.controller)
+        
     # def run_prediction(self):
 
     #     self.params['num_sonde_test'] = int(self.sonde_test_var.get())
@@ -152,7 +149,54 @@ class UIparams(ttk.Frame):
     #     print(f"R² pour le test : {self.controller.evaluer(train=False)}")
 
     #     self.controller.afficher_resultats()
-    
+
+class UICompileModel(ttk.Frame):
+    """Classe pour l'interface utilisateur de compilation du modèle."""
+    def __init__(self, parent, controller):
+        """Initialise l'interface utilisateur de compilation du modèle."""
+        super().__init__(parent)
+        self.controller = controller
+        self.model_RdN = ModeleReseauNeurones(parameters=parent.params)
+        
+        # Afficher les résultats dans une nouvelle fenêtre
+        results_window = tk.Toplevel(self)
+        results_window.title("Résultats")
+        
+        
+        def destroy_window():
+            self.model_RdN.clear()
+            del self.model_RdN
+            # Fermer la fenêtre de résultats
+            results_window.destroy()
+            
+        
+        # Bouton pour fermer cette fenêtre
+        ttk.Button(results_window, text="Fermer", command=destroy_window).pack(pady=10)
+
+        # Lancer l'entraînement dans un thread pour ne pas bloquer l'UI
+        def entrainement():
+            # self.model_RdN.set_parameters(parameters=params)
+            self.model_RdN.remplissage_donnees()
+            self.model_RdN.create_reseau()
+            self.model_RdN.entrainer()
+            print(f"R² pour l'entraînement : {self.model_RdN.evaluer(train=True)}")
+            self.model_RdN.sauvegarder_apprentissage(MOD_PERSO_DIRECTORY)
+            # Optionnel : afficher un message à la fin
+            # tk.messagebox.showinfo("Info", "Entraînement terminé !")
+            print(f"adresse de model_RdN : {self.model_RdN}")
+            # Bouton pour afficher l'historique d'entraînement
+            ttk.Button(results_window, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique(self.model_RdN, results_window)).pack()
+
+            # Bouton pour afficher les résultats de l'entraînement
+            ttk.Button(results_window, text="Afficher les résultats de l'entraînement", command=lambda: self.controller.afficher_resultats_train(self.model_RdN, results_window)).pack(pady=10)
+
+            # Bouton pour aficher les résultats du réseau en changeant les données de test
+            ttk.Button(results_window, text="Afficher les résultats du test", command=lambda: self.controller.afficher_resultats_test(self.model_RdN, results_window)).pack(pady=10)
+
+        threading.Thread(target=entrainement, daemon=True).start()
+
+        
+        
 class UIModelSelector(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -310,6 +354,12 @@ class MainApp(tk.Tk):
         return self.model_Rdn.evaluer(train=train)
     
     def compile_model(self, params):
+        
+        
+        # Afficher les résultats dans une nouvelle fenêtre
+        new_window = tk.Toplevel(self)
+        new_window.title("Résultats")
+
         self.model_Rdn.set_parameters(parameters=params)
         self.model_Rdn.remplissage_donnees()
         self.model_Rdn.create_reseau()
@@ -326,19 +376,23 @@ class MainApp(tk.Tk):
         
         # self.afficher_resultats(test=False)
 
-    def afficher_resultats_test(self):
-        
+    def afficher_resultats_test(self, model_Rdn=None, frame=None):
+        if frame is None:
+            frame = self
+        if model_Rdn is None:
+            model_Rdn = self.model_Rdn
         # Afficher les résultats dans une nouvelle fenêtre
-        results_window = tk.Toplevel(self)
+        results_window = tk.Toplevel(frame)
         results_window.title("Résultats")
+        results_window.geometry("600x400")
         
         # Frame pour les contrôles
         control_frame = ttk.Frame(results_window)
         control_frame.pack(fill="x", padx=10, pady=5)
         
         # Variables de tests
-        sonde_var = tk.StringVar(value=self.model_Rdn.parameters.get('num_sonde_test', 0))
-        nb_test_var = tk.StringVar(value=self.model_Rdn.parameters.get('nb_test', 1000))
+        sonde_var = tk.StringVar(value=model_Rdn.parameters.get('num_sonde_test', 0))
+        nb_test_var = tk.StringVar(value=model_Rdn.parameters.get('nb_test', 1000))
 
         # Création de la figure
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -352,30 +406,30 @@ class MainApp(tk.Tk):
                 'nb_test': nb_test
             }
 
-            self.model_Rdn.set_parameters(params)
-            self.model_Rdn.remplissage_donnees(train=False)
-            self.model_Rdn.predire()
-            print(f"R² pour le test : {self.model_Rdn.evaluer(train=False)}")
-            
-            if self.model_Rdn.X_test is not None and self.model_Rdn.y_test is not None:
+            model_Rdn.set_parameters(params)
+            model_Rdn.remplissage_donnees(train=False)
+            model_Rdn.predire()
+            print(f"R² pour le test : {model_Rdn.evaluer(train=False)}")
+
+            if model_Rdn.X_test is not None and model_Rdn.y_test is not None:
                 ax.clear()
                 # Tracer les données de test
-                ax.scatter(self.model_Rdn.X_test[:,0], 
-                           self.model_Rdn.y_test[:], 
+                ax.scatter(model_Rdn.X_test[:,0], 
+                           model_Rdn.y_test[:], 
                            label='Données de test', color='blue', s=10)
                 
                 # Tracer les prédictions
-                ax.scatter(self.model_Rdn.X_test[:,0], 
-                           self.model_Rdn.y_pred_test[:], 
+                ax.scatter(model_Rdn.X_test[:,0], 
+                           model_Rdn.y_pred_test[:], 
                            label='Prédictions', color='red', s=10)
                 
                 ax.set_title("Résultats du test")
                 ax.set_xlabel("u")
-                if self.model_Rdn.parameters['y'] == 1:
+                if model_Rdn.parameters['y'] == 1:
                     ax.set_ylabel("w")
                 else:
                     ax.set_ylabel("v")
-                ax.legend(title=f"R² : {self.model_Rdn.r2test:.5f}")
+                ax.legend(title=f"R² : {model_Rdn.r2test:.5f}")
                 ax.grid(True)
             else:
                 ax.set_title("Aucune donnée de test disponible")
@@ -417,14 +471,23 @@ class MainApp(tk.Tk):
         
         plt.close(fig)  # Fermer la figure matplotlib (pas la fenêtre tkinter)
 
-    def afficher_resultats_train(self):
-        
+    def afficher_resultats_train(self, model_Rdn=None, frame=None):
+
+        if frame is None:
+            frame = self
+
+        if model_Rdn is None:
+            model_Rdn = self.model_Rdn
+
+        if model_Rdn.X_train is None or model_Rdn.y_train is None or model_Rdn.y_pred_train is None:
+            tk.messagebox.showwarning("Avertissement", "Aucune donnée d'entraînement disponible.")
+            return
         # Afficher les résultats dans une nouvelle fenêtre
-        results_window = tk.Toplevel(self)
+        results_window = tk.Toplevel(frame)
         results_window.title("Résultats")
         
         fig, ax = plt.subplots()
-        plot_predictions(self.model_Rdn.X_train, self.model_Rdn.y_train, self.model_Rdn.y_pred_train, ax=ax)
+        plot_predictions(model_Rdn.X_train, model_Rdn.y_train, model_Rdn.y_pred_train, ax=ax)
 
         canvas = FigureCanvasTkAgg(fig, master=results_window)
         canvas.draw()
@@ -433,9 +496,16 @@ class MainApp(tk.Tk):
         ttk.Button(results_window, text="Fermer", command=results_window.destroy).pack(pady=10)
         plt.close(fig)
 
-    def afficher_historique(self):
+    def afficher_historique(self, model_Rdn=None, frame=None):
+        if frame is None:
+            frame = self
+        if model_Rdn is None:
+            model_Rdn = self.model_Rdn
+        if model_Rdn.history is None:
+            tk.messagebox.showwarning("Avertissement", "Aucun historique d'entraînement disponible.")
+            return
         # Créer une fenêtre de résultats avec plus d'options
-        results_window = tk.Toplevel(self)
+        results_window = tk.Toplevel(frame)
         results_window.title("Historique d'entraînement")
         results_window.geometry("800x600")  # Taille plus grande
         
@@ -446,8 +516,8 @@ class MainApp(tk.Tk):
         # Variable pour l'échelle
         # scale_var = tk.StringVar(value="linear")
         start_epoch_var = tk.IntVar(value=2)
-        end_epoch_var = tk.IntVar(value=len(self.model_Rdn.history.history.get(self.model_Rdn.parameters['loss'], [])) - 1)
-        
+        end_epoch_var = tk.IntVar(value=len(model_Rdn.history.history.get(model_Rdn.parameters['loss'], [])) - 1)
+
         # Création de la figure
         fig, ax = plt.subplots(figsize=(10, 6))
         
@@ -459,8 +529,8 @@ class MainApp(tk.Tk):
             start = start_epoch_var.get()
             end = end_epoch_var.get()
             # Récupérer et tracer les données d'entraînement
-            if erreur in self.model_Rdn.history.history:
-                y_train = self.model_Rdn.history.history[erreur]
+            if erreur in model_Rdn.history.history:
+                y_train = model_Rdn.history.history[erreur]
                 y_train_safe = [v if v != 0 else 1e-8 for v in y_train[start:end]]
                 ax.plot(y_train_safe, label='Entraînement', linewidth=2, markersize=3)
                 
@@ -471,8 +541,8 @@ class MainApp(tk.Tk):
             
             # Récupérer et tracer les données de validation
             val_key = f'val_{erreur}'
-            if val_key in self.model_Rdn.history.history:
-                y_val = self.model_Rdn.history.history[val_key]
+            if val_key in model_Rdn.history.history:
+                y_val = model_Rdn.history.history[val_key]
                 y_val_safe = [v if v != 0 else 1e-8 for v in y_val[start:end]]
                 ax.plot(y_val_safe, label='Validation', linewidth=2, marker='x', markersize=3, alpha=0.8)
                 
@@ -490,7 +560,7 @@ class MainApp(tk.Tk):
 
 
             # Ajouter une annotation pour la valeur finale
-            if erreur in self.model_Rdn.history.history:
+            if erreur in model_Rdn.history.history:
                 final_value = y_train_safe[-1]
                 ax.annotate(f'Valeur finale: {final_value:.5f}', 
                         xy=(len(y_train_safe)-1, final_value),
