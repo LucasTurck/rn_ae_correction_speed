@@ -241,8 +241,8 @@ class ModeleReseauNeurones(ModelePrediction):
         chemin_historique = os.path.join(dossier, "historique.json")
         if os.path.exists(chemin_historique):
             with open(chemin_historique, "r") as f:
-                self.history = json.load(f)
-    
+                self.history.history = json.load(f)
+
         # Charger les scores R² (optionnel)
         chemin_scores = os.path.join(dossier, "scores.json")
         if os.path.exists(chemin_scores):

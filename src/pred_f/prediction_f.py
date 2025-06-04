@@ -129,6 +129,8 @@ class ModelePrediction:
         # print(f"Nombre d'échantillons d'entraînement : {len(self.X_train)}")
         # print(f"Nombre de caractéristiques d'entraînement : {self.X_train.shape[1]}")
         # print(f"Nombre de cibles d'entraînement : {len(self.y_train)}")
+        # print(f"Nombre d'échantillons de test : {len(self.X_test) if self.X_test is not None else 'Aucun'}")
+        # print(f"Nombre de caractéristiques de test : {self.X_test.shape[1] if self.X_test is not None else 'Aucune'}")
         if train and len(self.X_train) != len(self.y_train):
             print("remplissage_donnees - Erreur : Le nombre d'échantillons d'entraînement ne correspond pas au nombre de cibles.")
             exit(1)

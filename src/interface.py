@@ -67,12 +67,12 @@ class UIparams(ttk.Frame):
         ttk.Entry(self, textvariable=self.nb_train_var).pack()
         
         ### sonde test :
-        ttk.Label(self, text="Sonde de test :").pack()
-        ttk.Entry(self, textvariable=self.sonde_test_var).pack()
+        # ttk.Label(self, text="Sonde de test :").pack()
+        # ttk.Entry(self, textvariable=self.sonde_test_var).pack()
 
-        ### nombres de données de test :
-        ttk.Label(self, text="Nombre de données de test :").pack()
-        ttk.Entry(self, textvariable=self.nb_test_var).pack()
+        # ### nombres de données de test :
+        # ttk.Label(self, text="Nombre de données de test :").pack()
+        # ttk.Entry(self, textvariable=self.nb_test_var).pack()
 
         ## Prédiction :
         ttk.Label(self, text="Prédiction :").pack()
@@ -100,13 +100,13 @@ class UIparams(ttk.Frame):
         ttk.Button(self, text="Compiler le réseau", command=lambda: self.controller.compile_model(params=self.params)).pack()
         
         # Bouton pour afficher l'historique d'entraînement
-        ttk.Button(self, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique(erreur=self.erreur_var.get())).pack()
+        ttk.Button(self, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique()).pack()
 
         # Bouton pour afficher les résultats de l'entraînement
-        ttk.Button(self, text="Afficher les résultats de l'entraînement", command=lambda: self.controller.afficher_resultats(test=False)).pack(pady=10)
+        ttk.Button(self, text="Afficher les résultats de l'entraînement", command=lambda: self.controller.afficher_resultats_train()).pack(pady=10)
 
         # Bouton pour aficher les résultats du réseau en changeant les données de test
-        ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.run_prediction()).pack(pady=10)
+        ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.controller.afficher_resultats_test()).pack(pady=10)
 
         # Bouton pour aller à l'interface de sélection du modèle
         ttk.Button(self, text="Sélectionner un modèle", command=lambda: self.controller.show_frame("UIModelSelector")).pack()
@@ -140,18 +140,18 @@ class UIparams(ttk.Frame):
         
         self.controller.set_params(params=self.params)
     
-    def run_prediction(self):
+    # def run_prediction(self):
 
-        self.params['num_sonde_test'] = int(self.sonde_test_var.get())
-        self.params['nb_test'] = int(self.nb_test_var.get())
+    #     self.params['num_sonde_test'] = int(self.sonde_test_var.get())
+    #     self.params['nb_test'] = int(self.nb_test_var.get())
         
-        self.controller.set_params(self.params)
-        self.controller.remplissage_donnees(train=False)
-        self.controller.predire()
+    #     self.controller.set_params(self.params)
+    #     self.controller.remplissage_donnees(train=False)
+    #     self.controller.predire()
 
-        print(f"R² pour le test : {self.controller.evaluer(train=False)}")
+    #     print(f"R² pour le test : {self.controller.evaluer(train=False)}")
 
-        self.controller.afficher_resultats()
+    #     self.controller.afficher_resultats()
     
 class UIModelSelector(ttk.Frame):
     def __init__(self, parent, controller):
@@ -180,7 +180,15 @@ class UIModelSelector(ttk.Frame):
         
         # Bonton de selection : 
         ttk.Button(self, text="Sélectionner le modèle", command=self.select_model).pack(pady=10)
-           
+        
+        # Bouton pour afficher l'historique d'entraînement
+        ttk.Button(self, text="Afficher l'historique d'entraînement", command=lambda: self.controller.afficher_historique()).pack(pady=10)
+        
+        # Bouton pour afficher les résultats de l'entraînement
+        ttk.Button(self, text="Afficher les résultats de l'entraînement", command=lambda: self.controller.afficher_resultats_train()).pack(pady=10)
+
+        # Bouton pour afficher les résultats du test
+        ttk.Button(self, text="Afficher les résultats du test", command=lambda: self.controller.afficher_resultats_test()).pack(pady=10)
 
     def populate_architectures(self):
         # Liste les dossiers dans MOD_DIRECTORY
@@ -233,17 +241,17 @@ class UIModelSelector(ttk.Frame):
                 self.controller.remplissage_donnees(train=True)
                 self.controller.charger_apprentissage(os.path.join(MOD_DIRECTORY, archi, run))
                 
-                self.params = config
-                self.sonde_test_var = tk.StringVar(value=self.params.get('num_sonde_test', 0))
-                self.nb_test_var = tk.StringVar(value=self.params.get('nb_test', 1000))
+                # self.params = config
+                # self.sonde_test_var = tk.StringVar(value=self.params.get('num_sonde_test', 0))
+                # self.nb_test_var = tk.StringVar(value=self.params.get('nb_test', 1000))
 
-                ttk.Label(self, text="Numéro de la sonde de test :").pack()
-                ttk.Entry(self, textvariable=self.sonde_test_var).pack()
+                # ttk.Label(self, text="Numéro de la sonde de test :").pack()
+                # ttk.Entry(self, textvariable=self.sonde_test_var).pack()
 
-                ttk.Label(self, text="Nombre de tests :").pack()
-                ttk.Entry(self, textvariable=self.nb_test_var).pack()
+                # ttk.Label(self, text="Nombre de tests :").pack()
+                # ttk.Entry(self, textvariable=self.nb_test_var).pack()
                 
-                ttk.Button(self, text="Lancer la prédiction", command=self.run_prediction).pack(pady=10)
+                # ttk.Button(self, text="Lancer la prédiction", command=self.run_prediction).pack(pady=10)
                 
 
             else:
@@ -321,17 +329,105 @@ class MainApp(tk.Tk):
         
         # self.afficher_resultats(test=False)
 
-    def afficher_resultats(self, test=True):
+    def afficher_resultats_test(self):
+        
+        # Afficher les résultats dans une nouvelle fenêtre
+        results_window = tk.Toplevel(self)
+        results_window.title("Résultats")
+        
+        # Frame pour les contrôles
+        control_frame = ttk.Frame(results_window)
+        control_frame.pack(fill="x", padx=10, pady=5)
+        
+        # Variables de tests
+        sonde_var = tk.StringVar(value=self.model_Rdn.parameters.get('num_sonde_test', 0))
+        nb_test_var = tk.StringVar(value=self.model_Rdn.parameters.get('nb_test', 1000))
+
+        # Création de la figure
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # Fonction de mise à jour du graphique
+        def update_graph():
+            sonde = int(sonde_var.get())
+            nb_test = int(nb_test_var.get())
+            params = {
+                'num_sonde_test': sonde,
+                'nb_test': nb_test
+            }
+
+            self.model_Rdn.set_parameters(params)
+            self.model_Rdn.remplissage_donnees(train=False)
+            self.model_Rdn.predire()
+            print(f"R² pour le test : {self.model_Rdn.evaluer(train=False)}")
+            
+            if self.model_Rdn.X_test is not None and self.model_Rdn.y_test is not None:
+                ax.clear()
+                # Tracer les données de test
+                ax.scatter(self.model_Rdn.X_test[:,0], 
+                           self.model_Rdn.y_test[:], 
+                           label='Données de test', color='blue', s=10)
+                
+                # Tracer les prédictions
+                ax.scatter(self.model_Rdn.X_test[:,0], 
+                           self.model_Rdn.y_pred_test[:], 
+                           label='Prédictions', color='red', s=10)
+                
+                ax.set_title("Résultats du test")
+                ax.set_xlabel("u")
+                if self.model_Rdn.parameters['y'] == 1:
+                    ax.set_ylabel("w")
+                else:
+                    ax.set_ylabel("v")
+                ax.legend(title=f"R² : {self.model_Rdn.r2test:.5f}")
+                ax.grid(True)
+            else:
+                ax.set_title("Aucune donnée de test disponible")
+                ax.set_xlabel("u")
+                ax.set_ylabel("w")
+            canvas.draw()
+        # Boutons de contrôle
+        ttk.Button(control_frame, text="Rafraîchir", command=update_graph).pack(side="left", padx=10)
+        ttk.Label(control_frame, text="Sonde :").pack(side="left")
+        ttk.Entry(control_frame, textvariable=sonde_var, width=5).pack(side="left")
+        ttk.Label(control_frame, text="Nombre de tests :").pack(side="left")
+        ttk.Entry(control_frame, textvariable=nb_test_var, width=6).pack(side="left")
+        
+        # Bouton pour sauvegarder l'image
+        from tkinter import filedialog
+        def save_figure():
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".png",
+                filetypes=[("PNG", "*.png"), ("JPEG", "*.jpg"), ("PDF", "*.pdf")]
+            )
+            if file_path:
+                fig.savefig(file_path, dpi=300, bbox_inches="tight")
+        
+        ttk.Button(control_frame, text="Sauvegarder", command=save_figure).pack(side="right")
+        ttk.Button(control_frame, text="Fermer", command=results_window.destroy).pack(side="right", padx=10)
+
+        # Canvas pour le graphique
+        canvas = FigureCanvasTkAgg(fig, master=results_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Toolbar
+        from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+        toolbar = NavigationToolbar2Tk(canvas, results_window)
+        toolbar.update()
+        
+        # Afficher le graphique initial
+        update_graph()
+        
+        plt.close(fig)  # Fermer la figure matplotlib (pas la fenêtre tkinter)
+
+    def afficher_resultats_train(self):
         
         # Afficher les résultats dans une nouvelle fenêtre
         results_window = tk.Toplevel(self)
         results_window.title("Résultats")
         
         fig, ax = plt.subplots()
-        if test:
-            plot_predictions(self.model_Rdn.X_test, self.model_Rdn.y_test, self.model_Rdn.y_pred_test, ax=ax)
-        else:
-            plot_predictions(self.model_Rdn.X_train, self.model_Rdn.y_train, self.model_Rdn.y_pred_train, ax=ax)
+        plot_predictions(self.model_Rdn.X_train, self.model_Rdn.y_train, self.model_Rdn.y_pred_train, ax=ax)
 
         canvas = FigureCanvasTkAgg(fig, master=results_window)
         canvas.draw()
@@ -340,7 +436,7 @@ class MainApp(tk.Tk):
         ttk.Button(results_window, text="Fermer", command=results_window.destroy).pack(pady=10)
         plt.close(fig)
 
-    def afficher_historique(self, erreur):
+    def afficher_historique(self):
         # Créer une fenêtre de résultats avec plus d'options
         results_window = tk.Toplevel(self)
         results_window.title("Historique d'entraînement")
@@ -351,9 +447,9 @@ class MainApp(tk.Tk):
         control_frame.pack(fill="x", padx=10, pady=5)
         
         # Variable pour l'échelle
-        scale_var = tk.StringVar(value="linear")
+        # scale_var = tk.StringVar(value="linear")
         start_epoch_var = tk.IntVar(value=2)
-        end_epoch_var = tk.IntVar(value=len(self.model_Rdn.history.history.get(erreur, [])) - 1)
+        end_epoch_var = tk.IntVar(value=len(self.model_Rdn.history.history.get(self.model_Rdn.parameters['loss'], [])) - 1)
         
         # Création de la figure
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -369,7 +465,7 @@ class MainApp(tk.Tk):
             if erreur in self.model_Rdn.history.history:
                 y_train = self.model_Rdn.history.history[erreur]
                 y_train_safe = [v if v != 0 else 1e-8 for v in y_train[start:end]]
-                ax.plot(y_train_safe, label='Entraînement', linewidth=2, marker='o', markersize=3)
+                ax.plot(y_train_safe, label='Entraînement', linewidth=2, markersize=3)
                 
                 # Marquer le point minimal
                 min_idx = np.argmin(y_train_safe)
@@ -386,14 +482,14 @@ class MainApp(tk.Tk):
                 # Marquer le point minimal de validation
                 min_val_idx = np.argmin(y_val_safe)
                 ax.scatter(min_val_idx, y_val_safe[min_val_idx], color='green', s=100, 
-                        label=f'Min val: {y_val_safe[min_val_idx]:.5f} (epoch {min_val_idx})')
+                        label=f'Min val: {y_val_safe[min_val_idx]:.5f} (epoch {min_val_idx+start})')
     
             # Paramétrage du graphique
             ax.set_title(f"Historique d'entraînement - {erreur}", fontsize=14)
             ax.set_xlabel("Epoch", fontsize=12)
             ax.set_ylabel(f"{erreur.upper()}", fontsize=12)
             ax.grid(True, linestyle='--', alpha=0.7)
-            ax.set_yscale(scale_var.get())
+            # ax.set_yscale(scale_var.get())
 
 
             # Ajouter une annotation pour la valeur finale
@@ -401,24 +497,25 @@ class MainApp(tk.Tk):
                 final_value = y_train_safe[-1]
                 ax.annotate(f'Valeur finale: {final_value:.5f}', 
                         xy=(len(y_train_safe)-1, final_value),
-                        xytext=(len(y_train_safe)-20, y_train_safe[start]),
+                        xytext=(len(y_train_safe)*0.8, y_train_safe[start]),
                         arrowprops=dict(arrowstyle='->'))
             
             ax.legend(loc='best')
             canvas.draw()
         
-        # Boutons de contrôle
-        ttk.Label(control_frame, text="Échelle:").pack(side="left")
-        ttk.Radiobutton(control_frame, text="Linéaire", variable=scale_var, 
-                    value="linear", command=update_graph).pack(side="left")
-        ttk.Radiobutton(control_frame, text="Logarithmique", variable=scale_var, 
-                    value="log", command=update_graph).pack(side="left")
-        ttk.Radiobutton(control_frame, text="Logarithmique symétrique", variable=scale_var,
-                    value="logit", command=update_graph).pack(side="left")
+        # # Boutons de contrôle
+        # ttk.Label(control_frame, text="Échelle:").pack(side="left")
+        # ttk.Radiobutton(control_frame, text="Linéaire", variable=scale_var, 
+        #             value="linear", command=update_graph).pack(side="left")
+        # ttk.Radiobutton(control_frame, text="Logarithmique", variable=scale_var, 
+        #             value="log", command=update_graph).pack(side="left")
+        # ttk.Radiobutton(control_frame, text="Logarithmique symétrique", variable=scale_var,
+        #             value="logit", command=update_graph).pack(side="left")
+        ttk.Button(control_frame, text="Rafraîchir", command=update_graph).pack(side="left", padx=10)
         ttk.Label(control_frame, text="Début:").pack(side="left")
         ttk.Entry(control_frame, textvariable=start_epoch_var, width=5).pack(side="left")
-        # ttk.Label(control_frame, text="Fin:").pack(side="left")
-        # ttk.Entry(control_frame, textvariable=end_epoch_var, width=5).pack(side="left")
+        ttk.Label(control_frame, text="Fin:").pack(side="left")
+        ttk.Entry(control_frame, textvariable=end_epoch_var, width=5).pack(side="left")
         
         ttk.Radiobutton(control_frame, text="mae", variable=self.erreur_var,
                     value="mae", command=update_graph).pack(side="left")
