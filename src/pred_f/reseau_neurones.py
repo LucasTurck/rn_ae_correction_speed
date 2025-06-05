@@ -13,6 +13,7 @@ import tensorflow as tf
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 NAMES_METRICS = ["mse", "mae"]
+NAMES_LOSSES = ["mse", "mae", "huber_loss"]
 
 def build_model(input_shape, layer_defs):
     """

@@ -43,6 +43,8 @@ class UIparams(ttk.Frame):
 
         ## Architecture :
         dir_architectures = os.path.join(RDN_DIRECTORY, "architectures.json")
+        if not os.path.exists(dir_architectures):
+            raise FileNotFoundError(f"Le fichier de configuration {dir_architectures} n'existe pas.")
         with open(dir_architectures, 'r') as file:
             architectures = json.load(file)
         names_archi = [arch['name'] for arch in architectures]
