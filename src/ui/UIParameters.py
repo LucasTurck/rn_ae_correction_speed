@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk
 import os
 import json
-from ui.UICompileModel import UICompileModel
+from ui.UITest import UITest
 
 class UIParameters(ttk.Frame):
     def __init__(self, parent, controller):
@@ -36,13 +36,16 @@ class UIParameters(ttk.Frame):
     def create_window(self):
         parameters_window = tk.Toplevel(self)
         parameters_window.title("Choix des paramètres pour compiler un nouveau réseau de neurones")
-        parameters_window.geometry("600x400")
+        parameters_window.geometry("300x500")
 
         # Création des widgets pour les paramètres
         self.create_widgets(parameters_window)
 
-    def create_widgets(self):
+    def create_widgets(self, parent):
         # Ajouter des widgets pour les paramètres
+
+        # Bouton pour fermer la fenêtre
+        ttk.Button(parent, text="Fermer", command=parent.destroy).pack(pady=10)
 
         ## Architecture :
         dir_architectures = os.path.join(RDN_DIRECTORY, "architectures.json")
@@ -51,49 +54,49 @@ class UIParameters(ttk.Frame):
         with open(dir_architectures, 'r') as file:
             architectures = json.load(file)
         names_archi = [arch['name'] for arch in architectures]
-        ttk.Label(self, text="Architecture :").pack()
-        ttk.Combobox(self, textvariable=self.archi_var, values=names_archi, state="readonly").pack()
-        
+        ttk.Label(parent, text="Architecture :").pack()
+        ttk.Combobox(parent, textvariable=self.archi_var, values=names_archi, state="readonly").pack()
+
         ## Erreur :
-        ttk.Label(self, text="Erreur :").pack()
+        ttk.Label(parent, text="Erreur :").pack()
         names_loss = NAMES_LOSSES
-        ttk.Combobox(self, values=names_loss, textvariable=self.erreur_var, state="readonly").pack()
+        ttk.Combobox(parent, values=names_loss, textvariable=self.erreur_var, state="readonly").pack()
 
         ## data :
         ### E :
-        ttk.Label(self, text="E :").pack()
-        ttk.Entry(self, textvariable=self.E_var).pack()
+        ttk.Label(parent, text="E :").pack()
+        ttk.Entry(parent, textvariable=self.E_var).pack()
 
         ### sonde entrainement :
-        ttk.Label(self, text="Sonde d'entraînement :").pack()
-        ttk.Entry(self, textvariable=self.sonde_train_var).pack()
+        ttk.Label(parent, text="Sonde d'entraînement :").pack()
+        ttk.Entry(parent, textvariable=self.sonde_train_var).pack()
 
         ### nombres de données d'entraînement :
-        ttk.Label(self, text="Nombre de données d'entraînement :").pack()
-        ttk.Entry(self, textvariable=self.nb_train_var).pack()
-        
+        ttk.Label(parent, text="Nombre de données d'entraînement :").pack()
+        ttk.Entry(parent, textvariable=self.nb_train_var).pack()
+
         ## Prédiction :
-        ttk.Label(self, text="Prédiction :").pack()
-        ttk.Entry(self, textvariable=self.recursive_u_var).pack()
-        ttk.Entry(self, textvariable=self.recursive_v_var).pack()
-        ttk.Entry(self, textvariable=self.recursive_w_var).pack()
-        
+        ttk.Label(parent, text="Prédiction :").pack()
+        ttk.Entry(parent, textvariable=self.recursive_u_var).pack()
+        ttk.Entry(parent, textvariable=self.recursive_v_var).pack()
+        ttk.Entry(parent, textvariable=self.recursive_w_var).pack()
+
         ## y :
-        ttk.Label(self, text="y :").pack()
-        ttk.Entry(self, textvariable=self.y_var).pack()
+        ttk.Label(parent, text="y :").pack()
+        ttk.Entry(parent, textvariable=self.y_var).pack()
 
         ## paramètres d'apprentissage : 
         ### epochs :
-        ttk.Label(self, text="Nombre d'epochs :").pack()
-        ttk.Entry(self, textvariable=self.epochs_var).pack()
-        
+        ttk.Label(parent, text="Nombre d'epochs :").pack()
+        ttk.Entry(parent, textvariable=self.epochs_var).pack()
+
         ### batch_size :
-        ttk.Label(self, text="Taille du batch :").pack()
-        ttk.Entry(self, textvariable=self.batch_size_var).pack()
+        ttk.Label(parent, text="Taille du batch :").pack()
+        ttk.Entry(parent, textvariable=self.batch_size_var).pack()
 
         # Bouton pour compiler le reseau
-        ttk.Button(self, text="Compiler le réseau", command=lambda: self.compile_model()).pack()
-        
+        ttk.Button(parent, text="Compiler le réseau", command=lambda: self.compile_model()).pack()
+
     def save_parameters(self):
         # Enregistrer les paramètres dans le fichier JSON
         self.parameters['architecture'] = self.archi_var.get()
@@ -122,4 +125,5 @@ class UIParameters(ttk.Frame):
             
     def compile_model(self):
         self.save_parameters()
-        UICompileModel(self, self.controller)
+        test = UITest(self, self.controller, parameters=self.parameters)
+        test.compile_model()

@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from reed_data import lire_fichier_U
 from dir import DATA_DIRECTORY
 import numpy as np
-import gc
+import copy
 
 """
 Module de prédiction pour les données de sonde.
@@ -30,15 +30,13 @@ class ModelePrediction:
         self.r2test = -1
         # self.init_parameters()
 
-    def copy_model(self):
+    def copy_model(self, new_model = None):
         """
         Copie les paramètres du modèle de prédiction dans un nouveau modèle.
         Retourne une nouvelle instance de ModelePrediction avec les mêmes paramètres.
         """
-        import copy
         parameters_copy = copy.deepcopy(self.parameters)
-        new_model = ModelePrediction(self.nom_modele, parameters_copy)
-
+        new_model.set_parameters(parameters_copy)
         new_model.X_train = copy.deepcopy(self.X_train)
         new_model.y_train = copy.deepcopy(self.y_train)
         new_model.y_pred_train = copy.deepcopy(self.y_pred_train)
@@ -172,7 +170,7 @@ class ModelePrediction:
     def charger_apprentissage(self, dir_path):
         raise NotImplementedError
 
-    def predire(self, X):
+    def predire(self, X=None):
         raise NotImplementedError
 
     def evaluer(self, train=True):

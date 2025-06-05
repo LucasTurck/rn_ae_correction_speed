@@ -2,6 +2,7 @@ import tkinter as tk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+import numpy as np
 
 def save_figure(fig, defaultpath, defaultname):
     # Fonction pour sauvegarder la figure
@@ -25,10 +26,6 @@ def affichage_resultats_train(model = None, parent = None):
     if parent is None:
         raise ValueError("La fenêtre parent doit être fournie pour afficher les résultats de l'entraînement.")
 
-    # On vérifie que le modèle a été entraîné
-    if not model.is_trained:
-        raise ValueError("Le modèle n'a pas été entraîné. Veuillez entraîner le modèle avant d'afficher les résultats.")
-
     if model.X_train is None or model.y_train is None or model.y_pred_train is None:
         tk.messagebox.showwarning("Avertissement", "Aucune donnée d'entraînement disponible.")
         return
@@ -42,16 +39,16 @@ def affichage_resultats_train(model = None, parent = None):
     control_frame = tk.Frame(result_window)
     control_frame.pack(fill="x", padx=10, pady=5)
     
+    fig, ax = plt.subplots(figsize=(5, 4))
+    
     # Canvas pour afficher la figure
     canvas = FigureCanvasTkAgg(fig, master=result_window)
 
     # Bouton pour fermer la fenêtre
     tk.Button(control_frame, text="Fermer", command=result_window.destroy).pack(side="right")
 
-    fig, ax = plt.subplots(figsize=(5, 4))
-    
-    ax.scatter(model.X_train, model.y_train, label='Données réelles', color='blue')
-    ax.scatter(model.X_train, model.y_pred_train, label='Prédictions', color='red')
+    ax.scatter(model.X_train[:, 0], model.y_train, label='Données réelles', color='blue')
+    ax.scatter(model.X_train[:, 0], model.y_pred_train, label='Prédictions', color='red')
     ax.set_xlabel("u")
     if model.parameters['y'] == 1:
         ax.set_ylabel("w")
@@ -82,14 +79,10 @@ def affichage_resultats_test(model = None, parent = None):
     if parent is None:
         raise ValueError("La fenêtre parent doit être fournie pour afficher les résultats du test.")
     
-    # On vérifie que le modèle a été entraîné
-    if not model.is_trained:
-        raise ValueError("Le modèle n'a pas été entraîné. Veuillez entraîner le modèle avant d'afficher les résultats.")
-    
     # Afficher les résultats dans une nouvelle fenêtre
     result_window = tk.Toplevel(parent)
     result_window.title("Résultats du test")
-    result_window.geometry("400x300")
+    result_window.geometry("600x450")
     
     # Frame pour les contrôles
     control_frame = tk.Frame(result_window)
@@ -140,12 +133,12 @@ def affichage_resultats_test(model = None, parent = None):
         canvas.draw()
 
     # Boutons de contrôles
+    tk.Button(control_frame, text="update", command=update_results).pack(side="left")
     tk.Label(control_frame, text="Sonde de test :").pack(side="left")
     tk.Entry(control_frame, textvariable=sonde_test_var, width=5).pack(side="left")
     tk.Label(control_frame, text="Nombre de tests :").pack(side="left")
     tk.Entry(control_frame, textvariable=nb_test_var, width=5).pack(side="left")
-    tk.Button(control_frame, text="Mettre à jour", command=update_results).pack(side="left")
-
+    
 
     tk.Button(control_frame, text="Sauvegarder", command=save_figure).pack(side="right")
     tk.Button(control_frame, text="Fermer", command=result_window.destroy).pack(side="right", padx=10)
@@ -176,15 +169,15 @@ def affichage_historique(model = None, parent = None):
     # Afficher l'historique dans une nouvelle fenêtre
     history_window = tk.Toplevel(parent)
     history_window.title("Historique d'entraînement")
-    history_window.geometry("400x300")
-    
+    history_window.geometry("600x400")
+
     # Frame pour les contrôles
     control_frame = tk.Frame(history_window)
     control_frame.pack(fill="x", padx=10, pady=5)
     
     # Variables pour l'historique
-    start_epoch_var = tk.IntVar(value=2)
-    end_epoch_var = tk.IntVar(value=len(model.history.history.get(model.parameters['loss'], [])))
+    start_epoch_var = tk.IntVar(value=3)
+    end_epoch_var = tk.IntVar(value=len(model.history.history.get(model.parameters['loss'], []))-1)
     loss_var = tk.StringVar(value=model.parameters.get('loss', 'mae'))  # Variable pour l'erreur à afficher dans l'historique
     
     # Création de la figure
@@ -195,9 +188,68 @@ def affichage_historique(model = None, parent = None):
         start_epoch = int(start_epoch_var.get())
         end_epoch = int(end_epoch_var.get())
         loss = loss_var.get()
+        ax.clear()
         
         if loss not in model.history.history:
             tk.messagebox.showwarning("Avertissement", f"Erreur '{loss}' non trouvée dans l'historique.")
             return
         
         # Récupérer et tracer l'historique d'entrainement
+        if loss in model.history.history:
+            loss_values = model.history.history[loss][start_epoch-1:end_epoch]
+            ax.plot(loss_values, label=loss, linewidth=2, markersize=3)
+            
+            # Marquer le point minimal
+            min_idx = np.argmin(loss_values)
+            ax.scatter(min_idx, loss_values[min_idx], color='red', s=100,
+                       label=f"Min: {loss_values[min_idx]:.4f} (Epoch {min_idx + start_epoch})")
+        
+        # Récupérer et tracer l'historique de validation si disponible
+        val_loss = f"val_{loss}"
+        if val_loss in model.history.history:
+            val_loss_values = model.history.history[val_loss][start_epoch-1:end_epoch]
+            ax.plot(val_loss_values, label=val_loss, linewidth=2, markersize=3)
+            
+            # Marquer le point minimal
+            min_idx = np.argmin(val_loss_values)
+            ax.scatter(min_idx, val_loss_values[min_idx], color='green', s=100,
+                       label=f"Min: {val_loss_values[min_idx]:.4f} (Epoch {min_idx + start_epoch})")
+            
+        ax.set_xlabel("Epochs")
+        ax.set_ylabel(f"{loss.capitalize()}", fontsize=12)
+        ax.set_title(f"Historique d'entraînement - {model.parameters['architecture']}, epochs : {model.parameters['epochs']}, loss : {model.parameters['loss']}")
+        ax.grid(True, linestyle='--', alpha=0.7)
+        
+        # Ajouter à la legende la valeure minimale
+        ax.legend(title=f"Valeur finale : {loss_values[-1]:.4f} (Epoch {end_epoch})")
+        
+        ax.legend(loc='upper right')
+        canvas.draw()
+        
+    # Boutons de contrôles
+    tk.Button(control_frame, text="update", command=update_history).pack(side="left")
+    tk.Label(control_frame, text="Start Epoch:").pack(side="left")
+    tk.Entry(control_frame, textvariable=start_epoch_var, width=5).pack(side="left")
+    tk.Label(control_frame, text="End Epoch:").pack(side="left")
+    tk.Entry(control_frame, textvariable=end_epoch_var, width=5).pack(side="left")
+    
+    tk.Radiobutton(control_frame, text="mae", variable=loss_var, value="mae", command=update_history).pack(side="left")
+    tk.Radiobutton(control_frame, text="mse", variable=loss_var, value="mse", command=update_history).pack(side="left")
+    
+    # Bouton de sauvegarde et de fermeture
+    tk.Button(control_frame, text="Sauvegarder", command=lambda: save_figure(fig=fig, defaultname=f"historique - {model.parameters['architecture']}, epochs : {model.parameters['epochs']}, loss : {model.parameters['loss']}")).pack(side="right")
+    
+    tk.Button(control_frame, text="Fermer", command=history_window.destroy).pack(side="right", padx=10)
+    
+    # Canvas pour afficher la figure
+    canvas = FigureCanvasTkAgg(fig, master=history_window)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    
+    # Toolbar
+    toolbar = NavigationToolbar2Tk(canvas, history_window)
+    toolbar.update()
+    
+    update_history()  # Mettre à jour l'historique initialement
+    
+    plt.close(fig)  # Ferme la figure pour libérer la mémoire

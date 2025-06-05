@@ -8,9 +8,12 @@ from tqdm.keras import TqdmCallback
 import re
 import json
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
 import tensorflow as tf
-print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+import copy
+
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
+# print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 NAMES_METRICS = ["mse", "mae"]
 NAMES_LOSSES = ["mse", "mae", "huber_loss"]
@@ -134,12 +137,14 @@ class ModeleReseauNeurones(ModelePrediction):
         tf.keras.backend.clear_session()
 
     def __str__(self):
-        return f"ModeleReseauNeurones(architecture={self.parameters['architecture']}, epochs={self.parameters['epochs']}, batch_size={self.parameters['batch_size']})"
+        return f"(architecture={self.parameters['architecture']}, epochs={self.parameters['epochs']}, batch_size={self.parameters['batch_size']})"
     
     def copy_model(self):
-        new_model = super().copy_model()
+        new_model = ModeleReseauNeurones()
+        new_model = super().copy_model(new_model)
         new_model.model = keras.models.clone_model(self.model)
         new_model.model.set_weights(self.model.get_weights())
+        new_model.history = copy.deepcopy(self.history) if self.history is not None else None
         return new_model
 
     def init_parameters(self):
@@ -148,7 +153,6 @@ class ModeleReseauNeurones(ModelePrediction):
         self.parameters["epochs"] = self.parameters.get("epochs", 100)
         self.parameters["batch_size"] = self.parameters.get("batch_size", 64)
         self.parameters['loss'] = self.parameters.get('loss', 'mse')
-        print(f"Paramètres du modèle : {self.parameters}")
 
     def create_reseau(self):
         if self.X_train is None:
@@ -175,11 +179,22 @@ class ModeleReseauNeurones(ModelePrediction):
             callbacks=[TqdmCallback(verbose=1)])
         self.y_pred_train = self.model.predict(self.X_train).flatten()
 
-    def predire(self):
-        if self.X_test is not None:
-            self.y_pred_test = self.model.predict(self.X_test).flatten()
+    def predire(self, test = True):
+        if test:
+            if self.X_test is not None:
+                self.y_pred_test = self.model.predict(self.X_test).flatten()
+            else:
+                self.y_pred_test = None
         else:
-            self.y_pred_test = None
+            if self.X_train is not None:
+                self.y_pred_train = self.model.predict(self.X_train).flatten()
+            else:
+                self.y_pred_train = None
+        # print(f"Nombre de données d'entraînement : {self.X_train.shape[0]}")
+        # print(f"Nombre de données de prediction d'entraînement : {self.y_pred_train.shape[0] if self.y_pred_train is not None else 0}")
+
+        # print(f"Nombre de données de test : {self.X_test.shape[0] if self.X_test is not None else 0}")
+        # print(f"Nombre de données de prediction de test : {self.y_pred_test.shape[0] if self.y_pred_test is not None else 0}")
 
     def afficher(self):
         plot_predictions(self.X_train, self.y_train, self.y_pred_train, 
@@ -244,6 +259,9 @@ class ModeleReseauNeurones(ModelePrediction):
         with open(chemin_parametres, "r") as f:
             self.parameters = json.load(f)
         self.init_parameters()
+        
+        # Récupérer les données d'entraînement
+        self.remplissage_donnees(train=True)
     
         # Recréer l'architecture et le modèle
         json_path = os.path.join(os.path.dirname(__file__), "architectures.json")
@@ -255,6 +273,8 @@ class ModeleReseauNeurones(ModelePrediction):
         # Charger les poids
         chemin_modele = os.path.join(dossier, "poids.h5")
         self.model.load_weights(chemin_modele)
+        
+        self.predire(test = False)  # Prédire les valeurs sur les données d'entraînement
     
         # Charger l'historique d'entraînement (optionnel)
         chemin_historique = os.path.join(dossier, "historique.json")
