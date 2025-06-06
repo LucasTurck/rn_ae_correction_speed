@@ -20,13 +20,15 @@ class UITest(ttk.Frame):
         
         self.result_window = tk.Toplevel(self)
         self.result_window.title(f"Résultats - {self.model_RdN.parameters['architecture']}")
+        self.result_window.minsize(width=200, height=1)
 
         ttk.Button(self.result_window, text="Fermer", command=self.UI_destroy).pack(pady=10)
         
 
     def compile_model(self):
-        threading.Thread(target=self.entrainement, daemon=True).start()
-    
+        self.thread = threading.Thread(target=self.entrainement, daemon=True)
+        self.thread.start()
+
     def UI_destroy(self):
         self.model_RdN.clear()
         del self.model_RdN

@@ -24,19 +24,23 @@ class UIParameters(ttk.Frame):
         self.nb_train_var = tk.StringVar(value=self.parameters.get('nb_training', 1000))
         self.sonde_test_var = tk.StringVar(value=self.parameters.get('num_sonde_test', 0))
         self.nb_test_var = tk.StringVar(value=self.parameters.get('nb_test', 1000))
-        self.recursive_u_var = tk.StringVar(value=self.parameters.get('prediction', [0, 0, 0])[0])
-        self.recursive_v_var = tk.StringVar(value=self.parameters.get('prediction', [0, 0, 0])[1])
-        self.recursive_w_var = tk.StringVar(value=self.parameters.get('prediction', [0, 0, 0])[2])
+        self.recursive_u_var_start = tk.StringVar(value=self.parameters.get('prediction_start', [0, 0, 0])[0])
+        self.recursive_u_var_end = tk.StringVar(value=self.parameters.get('prediction_end', [1, 0, 0])[0])
+        self.recursive_v_var_start = tk.StringVar(value=self.parameters.get('prediction_start', [0, 0, 0])[1])
+        self.recursive_v_var_end = tk.StringVar(value=self.parameters.get('prediction_end', [0, 0, 0])[1])
+        self.recursive_w_var_start = tk.StringVar(value=self.parameters.get('prediction_start', [0, 0, 1])[2])
+        self.recursive_w_var_end = tk.StringVar(value=self.parameters.get('prediction_end', [0, 0, 1])[2])
+        self.timesteps_var = tk.StringVar(value=self.parameters.get('timesteps', 1))
         self.epochs_var = tk.StringVar(value=self.parameters.get('epochs', 10))
         self.batch_size_var = tk.StringVar(value=self.parameters.get('batch_size', 32))
-        self.y_var = tk.StringVar(value=self.parameters.get('y', 1))
+        self.y_var = tk.StringVar(value=self.parameters.get('y', 2))
         self.erreur_var = tk.StringVar(value=self.parameters.get('loss', 'mae'))  # Variable pour l'erreur à afficher dans l'historique
         self.create_window()
         
     def create_window(self):
         parameters_window = tk.Toplevel(self)
         parameters_window.title("Choix des paramètres pour compiler un nouveau réseau de neurones")
-        parameters_window.geometry("300x550")
+        parameters_window.minsize(width=400, height=1)
 
         # Création des widgets pour les paramètres
         self.create_widgets(parameters_window)
@@ -76,10 +80,18 @@ class UIParameters(ttk.Frame):
         ttk.Entry(parent, textvariable=self.nb_train_var).pack()
 
         ## Prédiction :
-        ttk.Label(parent, text="Prédiction :").pack()
-        ttk.Entry(parent, textvariable=self.recursive_u_var).pack()
-        ttk.Entry(parent, textvariable=self.recursive_v_var).pack()
-        ttk.Entry(parent, textvariable=self.recursive_w_var).pack()
+        ttk.Label(parent, text="Prédiction start :").pack()
+        ttk.Entry(parent, textvariable=self.recursive_u_var_start).pack()
+        ttk.Entry(parent, textvariable=self.recursive_v_var_start).pack()
+        ttk.Entry(parent, textvariable=self.recursive_w_var_start).pack()
+        ttk.Label(parent, text="Prédiction end :").pack()
+        ttk.Entry(parent, textvariable=self.recursive_u_var_end).pack()
+        ttk.Entry(parent, textvariable=self.recursive_v_var_end).pack()
+        ttk.Entry(parent, textvariable=self.recursive_w_var_end).pack()
+        
+        ## timesteps :
+        ttk.Label(parent, text="Timesteps :").pack()
+        ttk.Entry(parent, textvariable=self.timesteps_var).pack()
 
         ## y :
         ttk.Label(parent, text="y :").pack()
@@ -98,7 +110,7 @@ class UIParameters(ttk.Frame):
         ttk.Button(parent, text="Enregistrer les paramètres", command=lambda: self.save_parameters()).pack(pady=10)
 
         # Bouton pour compiler le reseau
-        ttk.Button(parent, text="Compiler le réseau", command=lambda: self.compile_model()).pack()
+        ttk.Button(parent, text="Compiler le réseau", command=lambda: self.compile_model()).pack(pady=10)
 
     def save_parameters(self):
         # Enregistrer les paramètres dans le fichier JSON
@@ -108,11 +120,18 @@ class UIParameters(ttk.Frame):
         self.parameters['nb_training'] = int(self.nb_train_var.get())
         self.parameters['num_sonde_test'] = int(self.sonde_test_var.get())
         self.parameters['nb_test'] = int(self.nb_test_var.get())
-        self.parameters['prediction'] = [
-            int(self.recursive_u_var.get()),
-            int(self.recursive_v_var.get()),
-            int(self.recursive_w_var.get())
+        self.parameters['prediction_start'] = [
+            int(self.recursive_u_var_start.get()),
+            int(self.recursive_v_var_start.get()),
+            int(self.recursive_w_var_start.get())
         ]
+        self.parameters['prediction_end'] = [
+            int(self.recursive_u_var_end.get()),
+            int(self.recursive_v_var_end.get()),
+            int(self.recursive_w_var_end.get())
+        ]
+        self.parameters['timesteps'] = int(self.timesteps_var.get())
+        self.parameters['target_shape']=[self.parameters['timesteps'], sum(self.parameters['prediction_end']) - sum(self.parameters['prediction_start'])]
         self.parameters['y'] = int(self.y_var.get())
         self.parameters['epochs'] = int(self.epochs_var.get())
         self.parameters['batch_size'] = int(self.batch_size_var.get())

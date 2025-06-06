@@ -1,16 +1,18 @@
 from pred_f.prediction_f import ModelePrediction, plot_predictions, args_to_dict
-from dir import MOD_PERSO_DIRECTORY
+from reed_data import lire_fichier_U
+from dir import MOD_PERSO_DIRECTORY, DATA_DIRECTORY
 import datetime
 import hashlib
 from tensorflow import keras
 from tensorflow.keras import layers
+from tensorflow.keras import regularizers
 from tqdm.keras import TqdmCallback
 import re
 import json
 import os
 import tensorflow as tf
 import copy
-
+import numpy as np
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
 # print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
@@ -18,7 +20,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
 NAMES_METRICS = ["mse", "mae"]
 NAMES_LOSSES = ["mse", "mae", "huber_loss"]
 
-def build_model(input_shape, layer_defs):
+
+
+def build_model1(input_shape, layer_defs):
     """
     Builds a Keras Sequential model based on the provided input shape and layer definitions.
 
@@ -61,7 +65,85 @@ def build_model(input_shape, layer_defs):
                 model.add(layers.Reshape((input_shape[0], layer["target_shape"])))
             else:
                 model.add(layers.Reshape(tuple(layer["target_shape"])))
-        # Ajoute d'autres types de couches si besoin
+        elif layer["type"] == "Dropout":
+            model.add(layers.Dropout(layer.get("rate", 0.5)))
+        elif layer["type"] == "BatchNormalization":
+            model.add(layers.BatchNormalization())
+        elif layer["type"] == "LSTM":
+            model.add(layers.LSTM(layer["units"], activation=layer.get("activation"), return_sequences=layer.get("return_sequences", False)))
+    return model
+
+def build_model2(input_shape, layer_defs):
+    model = keras.Sequential()
+    model.add(layers.Input(shape=input_shape))
+
+    def get_regularizer(name, value):
+        if name is None or value is None:
+            return None
+        if name == "l1":
+            return regularizers.l1(float(value))
+        if name == "l2":
+            return regularizers.l2(float(value))
+        if name == "l1_l2":
+            return regularizers.l1_l2()
+        return None
+
+    for layer in layer_defs:
+        ltype = layer["type"]
+
+        # Préparation des arguments dynamiques
+        kwargs = dict(layer)
+        kwargs.pop("type", None)
+
+        # Gestion des régularisateurs
+        for reg in ["kernel_regularizer", "recurrent_regularizer"]:
+            if reg in kwargs:
+                kwargs[reg] = get_regularizer(kwargs[reg], 0.01) if isinstance(kwargs[reg], str) else kwargs[reg]
+
+        if ltype == "Dense":
+            model.add(layers.Dense(**kwargs))
+        elif ltype == "Conv1D":
+            model.add(layers.Conv1D(**kwargs))
+        elif ltype == "Flatten":
+            model.add(layers.Flatten())
+        elif ltype == "Reshape":
+            target_shape = kwargs.get("target_shape")
+            if not isinstance(target_shape, (list, tuple)):
+                target_shape = (input_shape[0], target_shape)
+            else:
+                target_shape = tuple(target_shape)
+            model.add(layers.Reshape(target_shape))
+        elif ltype == "Dropout":
+            model.add(layers.Dropout(kwargs.get("rate", 0.5)))
+        elif ltype == "BatchNormalization":
+            model.add(layers.BatchNormalization())
+        elif ltype == "LSTM":
+            # Gestion des régularisateurs et dropout
+            for reg in ["kernel_regularizer", "recurrent_regularizer"]:
+                if reg in kwargs:
+                    kwargs[reg] = get_regularizer(kwargs[reg], 0.01) if isinstance(kwargs[reg], str) else kwargs[reg]
+            model.add(layers.LSTM(**kwargs))
+        elif ltype == "GRU":
+            for reg in ["kernel_regularizer", "recurrent_regularizer"]:
+                if reg in kwargs:
+                    kwargs[reg] = get_regularizer(kwargs[reg], 0.01) if isinstance(kwargs[reg], str) else kwargs[reg]
+            model.add(layers.GRU(**kwargs))
+        elif ltype == "Bidirectional":
+            inner = kwargs["layer"]
+            inner_type = inner.pop("type")
+            if inner_type == "LSTM":
+                inner_layer = layers.LSTM(**inner)
+            elif inner_type == "GRU":
+                inner_layer = layers.GRU(**inner)
+            else:
+                raise ValueError(f"Type de couche bidirectionnelle non supporté: {inner_type}")
+            model.add(layers.Bidirectional(inner_layer))
+        elif ltype == "Add":
+            # Les couches Add nécessitent un modèle fonctionnel, pas séquentiel.
+            raise NotImplementedError("La couche 'Add' nécessite un modèle fonctionnel (Functional API).")
+        else:
+            raise ValueError(f"Type de couche non supporté: {ltype}")
+
     return model
 
 def get_architecture_by_name(name, architectures):
@@ -154,7 +236,126 @@ class ModeleReseauNeurones(ModelePrediction):
         self.parameters["epochs"] = self.parameters.get("epochs", 100)
         self.parameters["batch_size"] = self.parameters.get("batch_size", 64)
         self.parameters['loss'] = self.parameters.get('loss', 'mse')
+        self.parameters['timesteps'] = self.parameters.get('timesteps', 1)
+        self.parameters['target_shape'] = self.parameters.get('target_shape', (self.parameters['timesteps'], 1))
         print(f"Paramètres du modèle : {self.parameters}")
+
+    def remplissage_donnees(self, train=True):
+        # lire les données d'entraînement ou de test
+        times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f"E_{self.parameters['E']}", 'U'))
+        if not sondes:
+            raise ValueError(f"Aucune donnée trouvée pour E_{self.parameters['E']} dans le fichier U.")
+        
+        if train:
+            num_sonde = self.parameters.get("num_sonde_train", 0)
+            nb_samples = self.parameters.get("nb_training", -1)
+        else:
+            num_sonde = self.parameters.get("num_sonde_test", 0)
+            nb_samples = self.parameters.get("nb_test", -1)
+        
+        if num_sonde not in sondes:
+            raise ValueError(f"La sonde {num_sonde} n'est pas disponible dans les données pour E_{self.parameters['E']}.")
+        
+        # Sélectionner les données de la sonde spécifiée
+        data = sondes[num_sonde][1]
+        if data is None or len(data) == 0:
+            raise ValueError(f"Aucune donnée disponible pour la sonde {num_sonde} dans E_{self.parameters['E']}.")
+        
+        if nb_samples > 0 and nb_samples < len(data):
+            # Limiter le nombre d'échantillons d'entraînement
+            data = data[:nb_samples]
+            
+        X, y = [], []
+        p_start, f_start, h_start = self.parameters['prediction_start']
+        p_end, f_end, h_end = self.parameters['prediction_end']
+        timesteps = self.parameters['timesteps']
+        y_index = self.parameters['y']
+        for i in range(max(p_start, f_start, h_start) * timesteps, len(data)):
+            feature_vector = []
+            for j in range(timesteps):
+                timesteps_vector = []
+                for k in range(p_start, p_end):
+                    timesteps_vector.append(data[i - j - k][0])  # u
+                for k in range(f_start, f_end):
+                    timesteps_vector.append(data[i - j - k][1])  # v
+                for k in range(h_start, h_end):
+                    timesteps_vector.append(data[i - j - k][2])  # w
+                feature_vector.append(timesteps_vector)
+            X.append(feature_vector[::-1])  # Inverser l'ordre des features
+            y.append(data[i][y_index])  # Prédiction de w ou v selon y_index
+        
+        if train:
+            self.X_train = np.array(X, dtype=np.float32)
+            self.y_train = np.array(y, dtype=np.float32)
+        else:
+            self.X_test = np.array(X, dtype=np.float32)
+            self.y_test = np.array(y, dtype=np.float32)
+
+        print(f"Données {'d entraînement' if train else 'de test'} chargées : {len(X)} échantillons, forme X = {self.X_train.shape if train else self.X_test.shape}, forme y = {self.y_train.shape if train else self.y_test.shape}")
+
+        # Vérifier que les données sont correctement remplies
+        if train:
+            if len(self.X_train) != len(self.y_train):
+                raise ValueError("Les données d'entraînement X et y doivent avoir la même longueur.")
+        if not train:
+            if len(self.X_test) != len(self.y_test):
+                raise ValueError("Les données de test X et y doivent avoir la même longueur.")
+        if self.X_train is not None and self.X_test is not None:
+            if self.X_train.shape[1] != self.X_test.shape[1]:
+                print(f"Attention : Les données d'entraînement et de test ont des formes différentes : {self.X_train.shape} vs {self.X_test.shape}")
+                raise ValueError("Les données d'entraînement et de test doivent avoir la même forme.")
+        
+    def build_model(self, architecture):
+        """
+        Builds a Keras model based on the provided architecture.
+        
+        Args:
+            architecture (list): A list of dictionaries defining the layers of the model.
+        """
+        if architecture is None:
+            raise ValueError("L'architecture ne peut pas être None.")
+        
+        self.model = keras.Sequential()
+        self.model.add(layers.Input(shape=self.X_train.shape[1:]))
+        
+        for layer in architecture:
+            layer_type = layer["type"]
+            if layer_type == "Dense":
+                self.model.add(layers.Dense(layer["units"], activation=layer.get("activation")))
+            elif layer_type == "Conv1D":
+                self.model.add(layers.Conv1D(filters=layer["filters"], 
+                                            kernel_size=layer["kernel_size"],
+                                            activation=layer.get("activation"), 
+                                            padding=layer.get("padding", "valid")))
+            elif layer_type == "Flatten":
+                self.model.add(layers.Flatten())
+            elif layer_type == "Reshape":
+                target_shape = layer.get("target_shape")
+                if target_shape is None:
+                    self.model.add(layers.Reshape(self.parameters.get("target_shape", (self.X_train.shape[1], 1))))
+                elif isinstance(target_shape, (list, tuple)):
+                    self.model.add(layers.Reshape(tuple(target_shape)))
+            elif layer_type == "Dropout":
+                self.model.add(layers.Dropout(layer.get("rate", 0.5)))
+            elif layer_type == "BatchNormalization":
+                self.model.add(layers.BatchNormalization())
+            elif layer_type == "LSTM":
+                self.model.add(layers.LSTM(layer["units"], 
+                                        activation=layer.get("activation"), 
+                                        return_sequences=layer.get("return_sequences", False)))
+            elif layer_type == "GRU":
+                self.model.add(layers.GRU(layer["units"], 
+                                        activation=layer.get("activation"), 
+                                        return_sequences=layer.get("return_sequences", False)))
+            elif layer_type == "Bidirectional":
+                if layer["layer"]["type"] == "LSTM":
+                    inner_layer = layers.LSTM(**layer["layer"])
+                elif layer["layer"]["type"] == "GRU":
+                    inner_layer = layers.GRU(**layer["layer"])
+                self.model.add(layers.Bidirectional(inner_layer))
+            elif layer_type == "Add":
+                # Les couches Add nécessitent un modèle fonctionnel, pas séquentiel.
+                raise NotImplementedError("La couche 'Add' nécessite un modèle fonctionnel (Functional API).")
 
     def create_reseau(self):
         if self.X_train is None:
@@ -168,8 +369,8 @@ class ModeleReseauNeurones(ModelePrediction):
 
         if architecture is None:
             print(f"Erreur : L'architecture '{architecture}' n'est pas définie dans 'architectures.json'.")
-            
-        self.model = build_model(self.X_train.shape[1:], architecture)
+
+        self.build_model(architecture)
 
     def entrainer(self):
         self.model.compile(optimizer='adam', loss=self.parameters['loss'], metrics=NAMES_METRICS)
@@ -270,7 +471,7 @@ class ModeleReseauNeurones(ModelePrediction):
         with open(json_path) as f:
             architectures = json.load(f)
         architecture = get_architecture_by_name(self.parameters["architecture"], architectures)
-        self.model = build_model(self.X_train.shape[1:], architecture)
+        self.build_model(architecture)
     
         # Charger les poids
         chemin_modele = os.path.join(dossier, "poids.h5")

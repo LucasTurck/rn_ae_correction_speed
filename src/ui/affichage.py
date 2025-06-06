@@ -47,8 +47,8 @@ def affichage_resultats_train(model = None, parent = None):
     # Bouton pour fermer la fenêtre
     tk.Button(control_frame, text="Fermer", command=result_window.destroy).pack(side="right")
 
-    ax.scatter(model.X_train[:, 0], model.y_train, label='Données réelles', color='blue')
-    ax.scatter(model.X_train[:, 0], model.y_pred_train, label='Prédictions', color='red')
+    ax.scatter(model.X_train[:, -1, 0], model.y_train, label='Données réelles', color='blue')
+    ax.scatter(model.X_train[:, -1, 0], model.y_pred_train, label='Prédictions', color='red')
     ax.set_xlabel("u")
     if model.parameters['y'] == 1:
         ax.set_ylabel("w")
@@ -116,11 +116,11 @@ def affichage_resultats_test(model = None, parent = None):
         ax.clear()
         
         # tracer les données de test
-        ax.scatter(model.X_test[:,0], model.y_test, label='Données réelles', color='blue')
-        
+        ax.scatter(model.X_test[:, -1, 0], model.y_test, label='Données réelles', color='blue')
+
         # tracer les prédictions
-        ax.scatter(model.X_test[:,0], model.y_pred_test, label='Prédictions', color='red')
-        
+        ax.scatter(model.X_test[:, -1, 0], model.y_pred_test, label='Prédictions', color='red')
+
         ax.set_xlabel("u")
         if model.parameters['y'] == 1:
             ax.set_ylabel("w")

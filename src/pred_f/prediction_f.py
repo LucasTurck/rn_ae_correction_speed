@@ -8,6 +8,23 @@ from dir import DATA_DIRECTORY
 import numpy as np
 import copy
 
+
+def mean_absolute_error(y_true, y_pred):
+    return np.mean(np.abs(y_true - y_pred))
+
+def mean_squared_error(y_true, y_pred):
+    return np.mean((y_true - y_pred) ** 2)
+
+def root_mean_squared_error(y_true, y_pred):
+    return np.sqrt(mean_squared_error(y_true, y_pred))
+
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    # Évite la division par zéro
+    non_zero = y_true != 0
+    return np.mean(np.abs((y_true[non_zero] - y_pred[non_zero]) / y_true[non_zero])) * 100
+
 """
 Module de prédiction pour les données de sonde.
 
@@ -62,7 +79,8 @@ class ModelePrediction:
         self.parameters['num_sonde_test'] = self.parameters.get('num_sonde_test', 1)
         self.parameters['nb_training'] = self.parameters.get('nb_training', -1)
         self.parameters['nb_test'] = self.parameters.get('nb_test', 100)
-        self.parameters['prediction'] = self.parameters.get('prediction', [0, 0, 0])
+        self.parameters['prediction_start'] = self.parameters.get('prediction_start', [0, 0, 0])
+        self.parameters['prediction_end'] = self.parameters.get('prediction_end', [1, 0, 0])
         self.parameters['y'] = self.parameters.get('y', 1)
 
     def set_parameters(self, parameters):
@@ -75,7 +93,7 @@ class ModelePrediction:
             self.parameters[key] = value
         self.init_parameters()
 
-    def remplissage_donnees(self, train=True):
+    def remplissage_donnees2(self, train=True):
         """
         Remplit les données d'entraînement pour la prédiction à partir des fichiers de données de sonde.
         Cette méthode lit les données d'une sonde spécifique à partir d'un fichier, prépare les caractéristiques (features) et les cibles (targets) pour l'entraînement d'un modèle de prédiction, en tenant compte des paramètres de fenêtre de prédiction définis dans `self.prediction`.
@@ -164,7 +182,10 @@ class ModelePrediction:
             if self.X_train.shape[1] != self.X_test.shape[1]:
                 print("remplissage_donnees - Erreur : Le nombre de caractéristiques d'entraînement ne correspond pas au nombre de caractéristiques de test.")
                 exit(1)
-            
+    
+    def remplissage_donnees(self, train=True):
+        raise NotImplementedError("La méthode remplissage_donnees doit être implémentée dans la sous-classe.")
+    
     def entrainer(self):
         raise NotImplementedError
     
