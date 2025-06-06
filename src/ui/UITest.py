@@ -41,25 +41,15 @@ class UITest(ttk.Frame):
         self.model_RdN.entrainer()
         print(f"R² pour l'entraînement : {self.model_RdN.evaluer(train=True)}")
         self.model_RdN.sauvegarder_apprentissage(MOD_PERSO_DIRECTORY)
-        # Optionnel : afficher un message à la fin
-        # tk.messagebox.showinfo("Info", "Entraînement terminé !")
-        print(f"adresse de model_RdN : {self.model_RdN}")
-        # Bouton pour afficher l'historique d'entraînement
-        ttk.Button(self.result_window, text="Afficher l'historique d'entraînement", command=lambda: affichage_historique(self.model_RdN, self.result_window)).pack()
-
-        # Bouton pour afficher les résultats de l'entraînement
-        ttk.Button(self.result_window, text="Afficher les résultats de l'entraînement", command=lambda: affichage_resultats_train(self.model_RdN, self.result_window)).pack(pady=10)
-
-        # Bouton pour aficher les résultats du réseau en changeant les données de test
-        ttk.Button(self.result_window, text="Afficher les résultats du test", command=lambda: affichage_resultats_test(self.model_RdN, self.result_window)).pack(pady=10)
+        self.result_window.after(0, self.afficher_resultats)
 
     def afficher_resultats(self):
+
+        # Bouton pour afficher l'historique d'entraînement
+        ttk.Button(self.result_window, text="Afficher l'historique d'entraînement", command=lambda: affichage_historique(self.model_RdN, self.result_window)).pack(pady=10)
         
         # Bouton pour afficher les résultats de l'entraînement
         ttk.Button(self.result_window, text="Afficher les résultats de l'entraînement", command=lambda: affichage_resultats_train(self.model_RdN, self.result_window)).pack(pady=10)
 
         # Bouton pour aficher les résultats du réseau en changeant les données de test
         ttk.Button(self.result_window, text="Afficher les résultats du test", command=lambda: affichage_resultats_test(self.model_RdN, self.result_window)).pack(pady=10)
-
-        # Bouton pour afficher l'historique d'entraînement
-        ttk.Button(self.result_window, text="Afficher l'historique d'entraînement", command=lambda: affichage_historique(self.model_RdN, self.result_window)).pack(pady=10)

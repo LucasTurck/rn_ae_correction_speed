@@ -348,10 +348,14 @@ class ModeleReseauNeurones(ModelePrediction):
                                         activation=layer.get("activation"), 
                                         return_sequences=layer.get("return_sequences", False)))
             elif layer_type == "Bidirectional":
-                if layer["layer"]["type"] == "LSTM":
-                    inner_layer = layers.LSTM(**layer["layer"])
-                elif layer["layer"]["type"] == "GRU":
-                    inner_layer = layers.GRU(**layer["layer"])
+                inner = dict(layer["layer"])  # Copie pour ne pas modifier l'original
+                inner_type = inner.pop("type")  # Retire "type"
+                if inner_type == "LSTM":
+                    inner_layer = layers.LSTM(**inner)
+                elif inner_type == "GRU":
+                    inner_layer = layers.GRU(**inner)
+                else:
+                    raise ValueError(f"Type de couche bidirectionnelle non supporté: {inner_type}")
                 self.model.add(layers.Bidirectional(inner_layer))
             elif layer_type == "Add":
                 # Les couches Add nécessitent un modèle fonctionnel, pas séquentiel.

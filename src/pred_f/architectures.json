@@ -131,7 +131,6 @@
             {"type": "LSTM", "units": 100, "return_sequences": true, "recurrent_dropout": 0.2},
             {"type": "BatchNormalization"},
             {"type": "GRU", "units": 50},
-            {"type": "Dropout", "rate": 0.3},
             {"type": "Flatten"},
             {"type": "Dense", "units": 32, "activation": "relu", "kernel_regularizer": "l2"},
             {"type": "BatchNormalization"},
