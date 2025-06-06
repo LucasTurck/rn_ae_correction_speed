@@ -36,7 +36,7 @@ class UIParameters(ttk.Frame):
     def create_window(self):
         parameters_window = tk.Toplevel(self)
         parameters_window.title("Choix des paramètres pour compiler un nouveau réseau de neurones")
-        parameters_window.geometry("300x500")
+        parameters_window.geometry("300x550")
 
         # Création des widgets pour les paramètres
         self.create_widgets(parameters_window)
@@ -93,6 +93,9 @@ class UIParameters(ttk.Frame):
         ### batch_size :
         ttk.Label(parent, text="Taille du batch :").pack()
         ttk.Entry(parent, textvariable=self.batch_size_var).pack()
+        
+        # Bouton pour enregistrer les paramètres
+        ttk.Button(parent, text="Enregistrer les paramètres", command=lambda: self.save_parameters()).pack(pady=10)
 
         # Bouton pour compiler le reseau
         ttk.Button(parent, text="Compiler le réseau", command=lambda: self.compile_model()).pack()
@@ -125,5 +128,4 @@ class UIParameters(ttk.Frame):
             
     def compile_model(self):
         self.save_parameters()
-        test = UITest(self, self.controller, parameters=self.parameters)
-        test.compile_model()
+        UITest(self, self.controller, parameters=self.parameters).compile_model()

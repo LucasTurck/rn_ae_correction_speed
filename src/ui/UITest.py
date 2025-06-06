@@ -1,12 +1,11 @@
-from dir import RDN_DIRECTORY, MOD_PERSO_DIRECTORY
+from dir import MOD_PERSO_DIRECTORY
 from pred_f.reseau_neurones import ModeleReseauNeurones
 from ui.affichage import affichage_resultats_train, affichage_resultats_test, affichage_historique
 import tkinter as tk
 from tkinter import ttk
-import os
-import json
 import gc
 import threading
+import copy
 
 class UITest(ttk.Frame):
     def __init__(self, parent, controller, parameters=None, model=None):
@@ -15,17 +14,15 @@ class UITest(ttk.Frame):
         if model is not None:
             self.model_RdN = model.copy_model()
         else:
-            self.model_RdN = ModeleReseauNeurones(parameters=parameters)
+            new_parameters = copy.deepcopy(parameters) if parameters else {}
+            self.model_RdN = ModeleReseauNeurones(parameters=new_parameters)
             self.model_RdN.init_parameters()
         
         self.result_window = tk.Toplevel(self)
-        self.result_window.title("Résultats")
-        # self.result_window.geometry("400x300")
-        
-        ttk.Label(self.result_window, text=self.model_RdN).pack(pady=10)
+        self.result_window.title(f"Résultats - {self.model_RdN.parameters['architecture']}")
 
         ttk.Button(self.result_window, text="Fermer", command=self.UI_destroy).pack(pady=10)
-
+        
 
     def compile_model(self):
         threading.Thread(target=self.entrainement, daemon=True).start()
@@ -35,7 +32,7 @@ class UITest(ttk.Frame):
         del self.model_RdN
         gc.collect()  # Collecte les objets inutilisés
         self.destroy()
-        
+
     def entrainement(self):
         self.model_RdN.remplissage_donnees()
         self.model_RdN.create_reseau()

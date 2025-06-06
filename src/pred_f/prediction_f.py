@@ -35,7 +35,7 @@ class ModelePrediction:
         Copie les paramètres du modèle de prédiction dans un nouveau modèle.
         Retourne une nouvelle instance de ModelePrediction avec les mêmes paramètres.
         """
-        parameters_copy = copy.deepcopy(self.parameters)
+        parameters_copy = self.copy_parameters()
         new_model.set_parameters(parameters_copy)
         new_model.X_train = copy.deepcopy(self.X_train)
         new_model.y_train = copy.deepcopy(self.y_train)
@@ -47,6 +47,10 @@ class ModelePrediction:
         new_model.r2test = self.r2test
 
         return new_model
+
+    def copy_parameters(self):
+        new_parameters = {copy.deepcopy(key): copy.deepcopy(value) for key, value in self.parameters.items()}
+        return new_parameters
 
     def init_parameters(self):
         """

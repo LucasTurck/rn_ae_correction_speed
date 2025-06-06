@@ -1,4 +1,3 @@
-from dir import MOD_DIRECTORY
 from ui.UIModelSelector import UIModelSelector
 from ui.UIParameters import UIParameters
 import tkinter as tk

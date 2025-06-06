@@ -142,6 +142,7 @@ class ModeleReseauNeurones(ModelePrediction):
     def copy_model(self):
         new_model = ModeleReseauNeurones()
         new_model = super().copy_model(new_model)
+        new_model.create_reseau()
         new_model.model = keras.models.clone_model(self.model)
         new_model.model.set_weights(self.model.get_weights())
         new_model.history = copy.deepcopy(self.history) if self.history is not None else None
@@ -153,6 +154,7 @@ class ModeleReseauNeurones(ModelePrediction):
         self.parameters["epochs"] = self.parameters.get("epochs", 100)
         self.parameters["batch_size"] = self.parameters.get("batch_size", 64)
         self.parameters['loss'] = self.parameters.get('loss', 'mse')
+        print(f"Paramètres du modèle : {self.parameters}")
 
     def create_reseau(self):
         if self.X_train is None:
