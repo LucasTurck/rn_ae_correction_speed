@@ -11,6 +11,24 @@ class ModeleRegressionLineaire(ModelePrediction):
         super().init_parameters()
         print(f"Initialisation des paramètres pour la régression linéaire : {self.parameters}")
 
+    def remplissage_donnees(self, train=True):
+        super().remplissage_donnees(train)
+        n = sum(self.parameters['prediction_end']) * self.parameters['timesteps'] - sum(self.parameters['prediction_start'])*self.parameters['timesteps']
+        print(n)
+        
+        if train:
+            X = np.zeros((self.X_train.shape[0], n))  # Crée un tableau vide pour stocker les données
+            for i in range(self.X_train.shape[0]):
+                X[i,:] = self.X_train[i,:].flatten()  # Assure que X_train est un tableau 2D
+            self.X_train = np.array(X)
+            print(f"X_train shape: {self.X_train.shape}")
+        else:
+            X = np.zeros((self.X_test.shape[0], n))  # Crée un tableau vide pour stocker les données
+            for i in range(self.X_test.shape[0]):
+                X[i,:] = self.X_test[i,:].flatten()  # Assure que X_test est un tableau 2D
+            self.X_test = np.array(X)
+            print(f"X_test shape: {self.X_test.shape}")
+
     def entrainer(self):
         self.model = LinearRegression()
         self.model.fit(self.X_train, self.y_train)

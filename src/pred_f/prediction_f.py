@@ -79,9 +79,10 @@ class ModelePrediction:
         self.parameters['num_sonde_test'] = self.parameters.get('num_sonde_test', 1)
         self.parameters['nb_training'] = self.parameters.get('nb_training', -1)
         self.parameters['nb_test'] = self.parameters.get('nb_test', 100)
-        self.parameters['prediction_start'] = self.parameters.get('prediction_start', [0, 0, 0])
-        self.parameters['prediction_end'] = self.parameters.get('prediction_end', [1, 0, 0])
-        self.parameters['y'] = self.parameters.get('y', 1)
+        self.parameters['prediction_start'] = self.parameters.get('prediction_start', [0, 0, 1])
+        self.parameters['prediction_end'] = self.parameters.get('prediction_end', [1, 0, 2])
+        self.parameters['timesteps'] = self.parameters.get('timesteps', 5)
+        self.parameters['y'] = self.parameters.get('y', 2)
 
     def set_parameters(self, parameters):
         """
@@ -93,97 +94,61 @@ class ModelePrediction:
             self.parameters[key] = value
         self.init_parameters()
 
-    def remplissage_donnees2(self, train=True):
-        """
-        Remplit les données d'entraînement pour la prédiction à partir des fichiers de données de sonde.
-        Cette méthode lit les données d'une sonde spécifique à partir d'un fichier, prépare les caractéristiques (features) et les cibles (targets) pour l'entraînement d'un modèle de prédiction, en tenant compte des paramètres de fenêtre de prédiction définis dans `self.prediction`.
-        Args:
-            e (int, optional): Numéro de l'expérience ou identifiant du dossier de données. Par défaut à 145.
-            num_sonde (int, optional): Numéro de la sonde à utiliser pour l'extraction des données. Par défaut à 0.
-            nb_training (int, optional): Nombre maximal d'échantillons d'entraînement à utiliser. Si négatif, utilise toutes les données disponibles. Par défaut à -1.
-            nb_test (int, optional): Nombre maximal d'échantillons de test à utiliser (non utilisé dans cette méthode). Par défaut à -1.
-        Side Effects:
-            Remplit les attributs `self.X_train` (features d'entraînement) et `self.y_train` (cibles d'entraînement) sous forme de tableaux NumPy.
-        Raises:
-            Affiche un message d'erreur et termine le programme si :
-                - Aucune donnée de sonde n'est trouvée.
-                - La sonde spécifiée n'est pas présente dans les données.
-                - Il n'y a pas de données pour la sonde spécifiée.
-                - Le nombre d'échantillons d'entraînement ne correspond pas au nombre de cibles.
-        """
-        # Lire les données
+    def remplissage_donnees(self, train=True):
+        
+        # lire les données d'entraînement ou de test
         times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f"E_{self.parameters['E']}", 'U'))
         if not sondes:
-            print("Aucune donnée de sonde trouvée.")
-            exit(1)
+            raise ValueError(f"Aucune donnée trouvée pour E_{self.parameters['E']} dans le fichier U.")
         
         if train:
-            # Utiliser les données d'entraînement
-            num_sonde = self.parameters['num_sonde_train']
-            nb_samples = self.parameters['nb_training']
+            num_sonde = self.parameters.get("num_sonde_train", 0)
+            nb_samples = self.parameters.get("nb_training", -1)
         else:
-            # Utiliser les données de test
-            num_sonde = self.parameters['num_sonde_test']
-            nb_samples = self.parameters['nb_test']
+            num_sonde = self.parameters.get("num_sonde_test", 0)
+            nb_samples = self.parameters.get("nb_test", -1)
         
-        # Préparer les données pour l'entraînement
         if num_sonde not in sondes:
-            print(f"Sonde {num_sonde} non trouvée dans les données.")
-            exit(1)
-        col = sondes[num_sonde][1]
-        if col is None:
-            print(f"Pas de données pour la sonde {num_sonde}.")
-            exit(1)
-
+            raise ValueError(f"La sonde {num_sonde} n'est pas disponible dans les données pour E_{self.parameters['E']}.")
         
-        if nb_samples > 0 and nb_samples < len(col):
+        # Sélectionner les données de la sonde spécifiée
+        data = sondes[num_sonde][1]
+        if data is None or len(data) == 0:
+            raise ValueError(f"Aucune donnée disponible pour la sonde {num_sonde} dans E_{self.parameters['E']}.")
+        
+        if nb_samples > 0 and nb_samples < len(data):
             # Limiter le nombre d'échantillons d'entraînement
-            col = col[:nb_samples]
-
-        # Par exemple, pour prediction = [1,1] (utilise X_{i-1}, X_{i} et y_{i-1})
-        p = self.parameters['prediction'][0]
-        f = self.parameters['prediction'][1]
-        h = self.parameters['prediction'][2]
-        X = []
-        for i in range(max(p, f, h), len(col)):
-            features = [col[i][0]]
-            # Ajoute X_{i-p} ... X_{i}
-            for k in range(p):
-                features.append(col[i-k-1][0])
-            # Ajoute X_{i-1-f} ... X_{i-1}
-            for k in range(f):
-                features.append(col[i-k-1][1])
-            # Ajoute X_{i-1-h} ... X_{i-1}
-            for k in range(h):
-                features.append(col[i-k-1][2])
-            X.append(features)
+            data = data[:nb_samples]
+            
+        X, y = [], []
+        p_start, f_start, h_start = self.parameters['prediction_start']
+        p_end, f_end, h_end = self.parameters['prediction_end']
+        timesteps = self.parameters['timesteps']
+        y_index = self.parameters['y']
+        for i in range(max(p_start, f_start, h_start) * timesteps, len(data)):
+            feature_vector = []
+            for j in range(timesteps):
+                timesteps_vector = []
+                for k in range(p_start, p_end):
+                    timesteps_vector.append(data[i - j - k][0])  # u
+                for k in range(f_start, f_end):
+                    timesteps_vector.append(data[i - j - k][1])  # v
+                for k in range(h_start, h_end):
+                    timesteps_vector.append(data[i - j - k][2])  # w
+                feature_vector.append(timesteps_vector)
+            X.append(feature_vector)  # Inverser l'ordre des features
+            y.append(data[i][y_index])  # Prédiction de w ou v selon y_index
+        
         if train:
-            # Entraînement
-            self.X_train = np.array(X)
-            self.y_train = np.array([col[i][self.parameters['y']] for i in range(max(p, f, h), len(col))])
+            self.X_train = np.array(X, dtype=np.float32)
+            self.y_train = np.array(y, dtype=np.float32)
         else:
-            # Test
-            self.X_test = np.array(X)
-            self.y_test = np.array([col[i][self.parameters['y']] for i in range(max(p, f, h), len(col))])
-            self.y_pred_test = None
+            self.X_test = np.array(X, dtype=np.float32)
+            self.y_test = np.array(y, dtype=np.float32)
 
-        # print(f"Nombre d'échantillons d'entraînement : {len(self.X_train)}")
-        # print(f"Nombre de caractéristiques d'entraînement : {self.X_train.shape[1]}")
-        # print(f"Nombre de cibles d'entraînement : {len(self.y_train)}")
-        # print(f"Nombre d'échantillons de test : {len(self.X_test) if self.X_test is not None else 'Aucun'}")
-        # print(f"Nombre de caractéristiques de test : {self.X_test.shape[1] if self.X_test is not None else 'Aucune'}")
-        if train and len(self.X_train) != len(self.y_train):
-            print("remplissage_donnees - Erreur : Le nombre d'échantillons d'entraînement ne correspond pas au nombre de cibles.")
-            exit(1)
-        if not train and self.X_test is not None and len(self.X_test) != len(self.y_test):
-            print("remplissage_donnees - Erreur : Le nombre d'échantillons de test ne correspond pas au nombre de cibles.")
-            exit(1)
-        if self.X_train is not None and self.X_test is not None and not train:
-            if self.X_train.shape[1] != self.X_test.shape[1]:
-                print("remplissage_donnees - Erreur : Le nombre de caractéristiques d'entraînement ne correspond pas au nombre de caractéristiques de test.")
-                exit(1)
-    
-    def remplissage_donnees(self, train=True):
+        print(f"Données {'d entraînement' if train else 'de test'} chargées : {len(X)} échantillons, forme X = {self.X_train.shape if train else self.X_test.shape}, forme y = {self.y_train.shape if train else self.y_test.shape}")
+
+    def remplissage_donnees2(self, train=True):
         raise NotImplementedError("La méthode remplissage_donnees doit être implémentée dans la sous-classe.")
     
     def entrainer(self):
@@ -251,8 +216,9 @@ def plot_predictions(X, y, y_pred, title = "Prédictions vs Réel", block=True, 
     - The R2 score is shown in the legend.
     - Only the first feature of X is used for plotting if X is multidimensional.
     """
+    n = 0
     if len(X[0]) > 1:
-        X = X[:, 0]  # Utiliser seulement la première composante pour l'affichage
+        X = X[:, n]  # Utiliser seulement la première composante pour l'affichage
     # print("plot_predictions - Nombre de prédictions :", len(y_pred))
     # print("plot_predictions - Nombre de cibles :", len(y))
     # print("plot_predictions - Nombre de caractéristiques :", X.shape)

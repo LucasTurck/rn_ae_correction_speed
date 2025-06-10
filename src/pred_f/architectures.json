@@ -153,5 +153,20 @@
             {"type": "Dense", "units": 32, "activation": "relu", "kernel_regularizer": "l2"},
             {"type": "Dense", "units": 1}
         ]
+    },
+    {
+        "name": "conv_deep_lstm",
+        "layers": [
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "Conv1D", "filters": 128, "kernel_size": 5, "activation": "relu", "padding": "same"},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 4, "activation": "relu", "padding": "same"},
+            {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "LSTM", "units": 128, "return_sequences": true},
+            {"type": "LSTM", "units": 64, "return_sequences": true},
+            {"type": "LSTM", "units": 32},
+            {"type": "Flatten"},
+            {"type": "Dense", "units": 32, "activation": "relu"},
+            {"type": "Dense", "units": 1}
+        ]
     }
 ]

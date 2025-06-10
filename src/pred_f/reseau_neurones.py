@@ -236,7 +236,6 @@ class ModeleReseauNeurones(ModelePrediction):
         self.parameters["epochs"] = self.parameters.get("epochs", 100)
         self.parameters["batch_size"] = self.parameters.get("batch_size", 64)
         self.parameters['loss'] = self.parameters.get('loss', 'mse')
-        self.parameters['timesteps'] = self.parameters.get('timesteps', 1)
         self.parameters['target_shape'] = self.parameters.get('target_shape', (self.parameters['timesteps'], 1))
         print(f"Paramètres du modèle : {self.parameters}")
 
