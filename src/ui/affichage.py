@@ -72,7 +72,7 @@ def affichage_resultats_train(model = None, parent = None):
     
     plt.close(fig)  # Ferme la figure pour libérer la mémoire
 
-def affichage_resultats_test(model = None, parent = None):
+def affichage_resultats_test(model = None, parent = None, simulate=False):
     # Fonction pour afficher les résultats du test
     if model is None:
         raise ValueError("Le modèle doit être fourni pour afficher les résultats du test.")
@@ -106,7 +106,7 @@ def affichage_resultats_test(model = None, parent = None):
         }
         
         model.set_parameters(parameters)
-        model.remplissage_donnees(train=False)
+        model.remplissage_donnees(train=False, simulate=simulate)
         model.predire()
         print(f"R² pour le test : {model.evaluer(train=False)}")
         

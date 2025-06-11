@@ -1,5 +1,6 @@
 from pred_f.prediction_f import ModelePrediction, plot_predictions, args_to_dict
 from reed_data import lire_fichier_U
+from simu_X_probes import calcul_U_effective, calculate_speed_vector_using_U_eff
 from dir import MOD_PERSO_DIRECTORY, DATA_DIRECTORY
 import datetime
 import hashlib
@@ -204,6 +205,7 @@ class ModeleReseauNeurones(ModelePrediction):
     def __init__(self, parameters=None):
         super().__init__('reseau_neurones', parameters)
         self.history = None
+        self.run_path = None
 
     def clear(self):
         self.model = None
@@ -237,33 +239,12 @@ class ModeleReseauNeurones(ModelePrediction):
         self.parameters["batch_size"] = self.parameters.get("batch_size", 64)
         self.parameters['loss'] = self.parameters.get('loss', 'mse')
         self.parameters['target_shape'] = self.parameters.get('target_shape', (self.parameters['timesteps'], 1))
-        print(f"Paramètres du modèle : {self.parameters}")
+        # print(f"Paramètres du modèle : {self.parameters}")
 
-    def remplissage_donnees(self, train=True):
-        # lire les données d'entraînement ou de test
-        times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f"E_{self.parameters['E']}", 'U'))
-        if not sondes:
-            raise ValueError(f"Aucune donnée trouvée pour E_{self.parameters['E']} dans le fichier U.")
+    def remplissage_donnees(self, train=True, simulate=False):
         
-        if train:
-            num_sonde = self.parameters.get("num_sonde_train", 0)
-            nb_samples = self.parameters.get("nb_training", -1)
-        else:
-            num_sonde = self.parameters.get("num_sonde_test", 0)
-            nb_samples = self.parameters.get("nb_test", -1)
-        
-        if num_sonde not in sondes:
-            raise ValueError(f"La sonde {num_sonde} n'est pas disponible dans les données pour E_{self.parameters['E']}.")
-        
-        # Sélectionner les données de la sonde spécifiée
-        data = sondes[num_sonde][1]
-        if data is None or len(data) == 0:
-            raise ValueError(f"Aucune donnée disponible pour la sonde {num_sonde} dans E_{self.parameters['E']}.")
-        
-        if nb_samples > 0 and nb_samples < len(data):
-            # Limiter le nombre d'échantillons d'entraînement
-            data = data[:nb_samples]
-            
+        data = self.simulate_probes(train=train, simulate=simulate)
+
         X, y = [], []
         p_start, f_start, h_start = self.parameters['prediction_start']
         p_end, f_end, h_end = self.parameters['prediction_end']
@@ -303,7 +284,43 @@ class ModeleReseauNeurones(ModelePrediction):
             if self.X_train.shape[1] != self.X_test.shape[1]:
                 print(f"Attention : Les données d'entraînement et de test ont des formes différentes : {self.X_train.shape} vs {self.X_test.shape}")
                 raise ValueError("Les données d'entraînement et de test doivent avoir la même forme.")
+
+    def simulate_probes(self, train=True, simulate=False):
+        # lire les données d'entraînement ou de test
+        times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f"E_{self.parameters['E']}", 'U'))
+        if not sondes:
+            raise ValueError(f"Aucune donnée trouvée pour E_{self.parameters['E']} dans le fichier U.")
         
+        if train:
+            num_sonde = self.parameters.get("num_sonde_train", 0)
+            nb_samples = self.parameters.get("nb_training", -1)
+        else:
+            num_sonde = self.parameters.get("num_sonde_test", 0)
+            nb_samples = self.parameters.get("nb_test", -1)
+        
+        if num_sonde not in sondes:
+            raise ValueError(f"La sonde {num_sonde} n'est pas disponible dans les données pour E_{self.parameters['E']}.")
+        
+        # Sélectionner les données de la sonde spécifiée
+        data = sondes[num_sonde][1]
+        if data is None or len(data) == 0:
+            raise ValueError(f"Aucune donnée disponible pour la sonde {num_sonde} dans E_{self.parameters['E']}.")
+        
+        if nb_samples > 0 and nb_samples < len(data):
+            # Limiter le nombre d'échantillons d'entraînement
+            data = data[:nb_samples]
+        
+        if not simulate:
+            # Si on ne simule pas, on utilise les données réelles
+            return data
+
+        U_2_eff_1, U_2_eff_2 = calcul_U_effective(data, self.parameters['k'], self.parameters['phi'], self.parameters['U_mean'], b_coord=self.parameters['y'])
+
+        u, v, w = calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, self.parameters['k'], self.parameters['phi'], self.parameters['U_mean'], b_coord=self.parameters['y'])
+
+        print(f"Nombre d'échantillons simulés : {len(u)}")
+        return list(zip(u, v, w))  # Retourne une liste de tuples (u, v, w) pour chaque échantillon
+
     def build_model(self, architecture):
         """
         Builds a Keras model based on the provided architecture.
@@ -418,6 +435,7 @@ class ModeleReseauNeurones(ModelePrediction):
         if not os.path.exists(dossier):
             os.makedirs(dossier)
         
+        self.run_path = dossier  # Stocker le chemin du run pour une utilisation ultérieure
 
         # Sauvegarde des poids
         chemin_modele = os.path.join(dossier, "poids.h5")
@@ -460,6 +478,9 @@ class ModeleReseauNeurones(ModelePrediction):
         """
         Charge les poids, les paramètres et l'historique d'un modèle sauvegardé.
         """
+        self.clear()  # Nettoyer l'état actuel du modèle
+        self.run_path = dossier  # Stocker le chemin du run pour une utilisation ultérieure
+        
         # Charger les paramètres du modèle
         chemin_parametres = os.path.join(dossier, "config.json")
         with open(chemin_parametres, "r") as f:
@@ -518,62 +539,4 @@ class ModeleReseauNeurones(ModelePrediction):
             plt.show(block = False)
         else:
             print("Aucun historique d'entraînement disponible.")
-    
-    
-if __name__ == "__main__":
-    import argparse
 
-    parser = argparse.ArgumentParser(description='Réseau de Neurones Model Training and Evaluation')
-    parser.add_argument('--config', type=str, help='Path to the configuration file for the model parameters')
-    parser.add_argument('--load', type=str, help='Path to the directory containing a saved model to load')
-    parser.add_argument('--E', type=int, help='Experiment number to load data for')
-    parser.add_argument('--num_sonde_train', type=int, help='Number of the probes to use in the model')
-    parser.add_argument('--num_sonde_test', type=int, help='Number of the probes to use in the model for testing')
-    parser.add_argument('--nb_training', type=int, help='Number of training samples to use, -1 for all')
-    parser.add_argument('--nb_test', type=int, help='Number of test samples to use, -1 for all')
-    parser.add_argument('--prediction', type=int, nargs=2, help='Prediction parameters [p, f] where p is the number of previous samples of u and f is the number of previous samples of v to use')
-    parser.add_argument('--architecture', type=str, help='Name of the neural network architecture to use')
-    parser.add_argument('--epochs', type=int, help='Number of epochs for training')
-    parser.add_argument('--batch_size', type=int, help='Batch size for training')
-    parser.add_argument('--y', type=int, help='Index of the column to predict (0 for u, 1 for v)')
-    args = parser.parse_args()
-    args_dict = args_to_dict(args)
-    
-    # Charger les paramètres depuis un fichier si fourni
-    if args.config:
-        with open(args.config, "r") as f:
-            file_params = json.load(f)
-        # Fusionner les paramètres du fichier et ceux de la ligne de commande (priorité à la ligne de commande)
-        file_params.update({k: v for k, v in args_dict.items() if v is not None})
-        params = file_params
-    else:
-        params = args_dict
-
-    # Créer
-    model_nn = ModeleReseauNeurones(parameters=params)
-    # Remplir les données d'entraînement
-    model_nn.remplissage_donnees()
-
-    model_nn.create_reseau()
-
-    model_nn.entrainer()
-
-
-    print(f"R² pour l'entraînement : {model_nn.evaluer(train=True)}")
-    
-    # Remplir les données de test
-    model_nn.remplissage_donnees(train=False)
-
-    # Prédire les valeurs sur les données de test
-    model_nn.predire()
-
-    print(f"R² pour le test : {model_nn.evaluer(train=False)}")
-
-    # Sauvegarder l'apprentissage
-    model_nn.sauvegarder_apprentissage(MOD_PERSO_DIRECTORY)
-    
-    # Afficher l'historique d'entraînement
-    model_nn.afichage_historique()
-    
-    # Afficher les résultats
-    model_nn.afficher()

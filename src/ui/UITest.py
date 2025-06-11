@@ -53,3 +53,6 @@ class UITest(ttk.Frame):
 
         # Bouton pour aficher les résultats du réseau en changeant les données de test
         ttk.Button(self.result_window, text="Afficher les résultats du test", command=lambda: affichage_resultats_test(self.model_RdN, self.result_window)).pack(pady=10)
+        
+        # Bouton pour afficher les résultats du test avec les données simulées
+        ttk.Button(self.result_window, text="test avec données simulées", command=lambda: affichage_resultats_test(self.model_RdN, self.result_window, simulate=True)).pack(pady=10)

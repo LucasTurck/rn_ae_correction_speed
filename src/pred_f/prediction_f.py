@@ -83,6 +83,9 @@ class ModelePrediction:
         self.parameters['prediction_end'] = self.parameters.get('prediction_end', [1, 0, 2])
         self.parameters['timesteps'] = self.parameters.get('timesteps', 5)
         self.parameters['y'] = self.parameters.get('y', 2)
+        self.parameters['k'] = self.parameters.get('k', 0.1)  # Coefficient de sensibilité tangentielle
+        self.parameters['phi'] = self.parameters.get('phi', 45)  # Angle de la sonde en degrés
+        self.parameters['U_mean'] = self.parameters.get('U_mean', 3.5)  # Vitesse moyenne du flux en m/s
 
     def set_parameters(self, parameters):
         """
