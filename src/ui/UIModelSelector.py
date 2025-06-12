@@ -1,4 +1,4 @@
-from dir import MOD_DIRECTORY
+from dir import MOD_PERSO_DIRECTORY
 from pred_f.reseau_neurones import ModeleReseauNeurones
 import tkinter as tk
 from tkinter import ttk
@@ -49,7 +49,7 @@ class UIModelSelector(ttk.Frame):
 
 
     def populate_architectures(self):
-        architectures = [d for d in os.listdir(MOD_DIRECTORY) if os.path.isdir(os.path.join(MOD_DIRECTORY, d))]
+        architectures = [d for d in os.listdir(MOD_PERSO_DIRECTORY) if os.path.isdir(os.path.join(MOD_PERSO_DIRECTORY, d))]
         self.archi_combo['values'] = architectures
         if architectures:
             self.architecture_var.set(architectures[0])
@@ -61,7 +61,7 @@ class UIModelSelector(ttk.Frame):
 
     def update_runs(self, event=None):
         architectures = self.architecture_var.get()
-        runs_dir = os.path.join(MOD_DIRECTORY, architectures)
+        runs_dir = os.path.join(MOD_PERSO_DIRECTORY, architectures)
         self.run_display_list = []
         self.run_display_to_dir = {}
         if os.path.exists(runs_dir):
@@ -95,14 +95,14 @@ class UIModelSelector(ttk.Frame):
         # if not architecture or not run:
         #     tk.messagebox.showerror("Erreur", "Veuillez sélectionner une architecture et un run.")
         #     return
-        # config_path = os.path.join(MOD_DIRECTORY, architecture, run, "config.json")
+        # config_path = os.path.join(MOD_PERSO_DIRECTORY, architecture, run, "config.json")
         # if not os.path.exists(config_path):
         #     tk.messagebox.showerror("Erreur", f"Le fichier de configuration {config_path} n'existe pas.")
         #     return
         # with open(config_path, 'r') as file:
         #     parameters = json.load(file)
         # self.model_RdN.load_parameters(parameters)
-        path = os.path.join(MOD_DIRECTORY, architecture, run)
+        path = os.path.join(MOD_PERSO_DIRECTORY, architecture, run)
         if not os.path.exists(path):
             tk.messagebox.showerror("Erreur", f"Le modèle {path} n'existe pas.")
             return

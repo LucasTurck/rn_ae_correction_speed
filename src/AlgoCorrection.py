@@ -14,6 +14,7 @@ class AlgoCorrection:
         self.original_speed = None
         self.simulated_speed = []
         self.corrected_speed = []
+        self.correction_factor = 0.1 # Facteur de correction pour la vitesse
         
     def charger_model(self, run_path):
         """Charge le modèle de réseau de neurones."""
@@ -109,29 +110,37 @@ class AlgoCorrection:
         
         U_2_eff_1, U_2_eff_2 = calcul_U_effective(self.simulated_speed[-1], k, phi, U_mean, b_coord=b_coord)
         u, v, w = calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_coord=b_coord, c=10*c)
+        print(f"u, v, w après correction : {u[:5]}, {v[:5]}, {w[:5]}...")  # Afficher les 5 premières valeurs
         if y == 1:
             self.corrected_speed.append(np.array(list(zip(u, c, w))))
         elif y == 2:
             self.corrected_speed.append(np.array(list(zip(u, v, c))))
+        if len(self.corrected_speed) > 1:
+            self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1]  + (1 - self.correction_factor) * self.corrected_speed[-2]
+        else:
+            self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1] + (1 - self.correction_factor) * self.simulated_speed[0]
+        print(f"Vitesse corrigée après correction : {self.corrected_speed[-1][:5]}...")  # Afficher les 5 premières valeurs
         
-    def plot_results(self, n = 50):
+    def plot_results(self, n = 200):
         """Affiche les résultats de la correction."""
         
         times = np.arange(len(self.original_speed))  # Générer un axe temporel simple
         
         plt.figure(figsize=(12, 6))
         plt.subplot(1, 3, 1)
-        plt.scatter(times[:n], self.original_speed[:n, 0], label='u original (m/s)', color='orange', alpha=0.5, s=10, linewidths=0.5)
+        # plt.scatter(times[:n], self.original_speed[:n, 0], label='u original (m/s)', color='orange', alpha=0.5, s=10, linewidths=0.5)
+        plt.plot(times[:n], self.original_speed[:n, 0], label='u original (m/s)', color='orange', alpha=0.5, linewidth=1)
         # plt.scatter(times[:n], self.simulated_speed[:n, 0], label='u simulé (m/s)', color='blue', alpha=0.5, s=10)
         for i in range(len(self.corrected_speed)):
             plt.scatter(times[:n], self.corrected_speed[i][:n, 0], label=f'u corrigé {i+1} (m/s)', alpha=0.5, s=i+5)
-        # plt.legend()
+        plt.legend()
         plt.title('Composante u')
         plt.xlabel('Temps')
         plt.ylabel('Vitesse (m/s)')
         plt.grid()
         plt.subplot(1, 3, 2)
-        plt.scatter(times[:n], self.original_speed[:n, 1], label='v original (m/s)', color='orange', alpha=0.5, s=10)
+        # plt.scatter(times[:n], self.original_speed[:n, 1], label='v original (m/s)', color='orange', alpha=0.5, s=10)
+        plt.plot(times[:n], self.original_speed[:n, 1], label='v original (m/s)', color='orange', alpha=0.5, linewidth=1)
         # plt.scatter(times[:n], self.simulated_speed[:n, 1], label='v simulé (m/s)', color='blue', alpha=0.5, s=10)
         for i in range(len(self.corrected_speed)):
             plt.scatter(times[:n], self.corrected_speed[i][:n, 1], label=f'v corrigé {i+1} (m/s)', alpha=0.5, s=i+5)
@@ -142,7 +151,8 @@ class AlgoCorrection:
         plt.grid()
         plt.tight_layout()
         plt.subplot(1, 3, 3)
-        plt.scatter(times[:n], self.original_speed[:n, 2], label='w original (m/s)', color='orange', alpha=0.5, s=10)
+        # plt.scatter(times[:n], self.original_speed[:n, 2], label='w original (m/s)', color='orange', alpha=0.5, s=10)
+        plt.plot(times[:n], self.original_speed[:n, 2], label='w original (m/s)', color='orange', alpha=0.5, linewidth=1)
         # plt.scatter(times[:n], self.simulated_speed[:n, 2], label='w simulé (m/s)', color='blue', alpha=0.5, s=10)
         for i in range(len(self.corrected_speed)):
             plt.scatter(times[:n], self.corrected_speed[i][:n, 2], label=f'w corrigé {i+1} (m/s)', alpha=0.5, s=i+5)
@@ -159,11 +169,12 @@ class AlgoCorrection:
 if __name__ == "__main__":
     algo = AlgoCorrection()
     # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'lstm_deep_dense', 'run_20250611_171132_e5f7cebe'))
-    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'lstm_deep_dense', 'run_20250611_172014_256d71f6'))
+    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'lstm_deep_dense', 'run_20250611_172014_256d71f6'))
+    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'lstm_deep_dense', 'run_20250612_102729_2a9e54f8'))
 
     algo.set_original_speed()
     algo.set_simulated_speed()
-    for i in range(10):  # Effectuer n itérations de correction
+    for i in range(3):  # Effectuer n itérations de correction
         algo.correct_speed()
         # print(f"Correction {i+1} effectuée : {algo.corrected_speed[-1][ : 5]}...")  # Afficher les 5 premières valeurs de la dernière correction
         try:

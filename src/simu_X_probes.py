@@ -30,13 +30,17 @@ def calcul_U_effective(speed_vector, k, phi, U_mean, b_coord = 1):
 
     return U_2_eff_1, U_2_eff_2
 
-def calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_coord = 1, c = 0):
+def calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_coord = 1, c = None):
     """
     U_eff_1, U_eff_2 : array-like de même forme
     Retourne u, v, w sous forme de tableaux numpy
     """
-    U_2_eff_1 = np.asarray(U_2_eff_1) - c**2
-    U_2_eff_2 = np.asarray(U_2_eff_2) - c**2
+    if c is None:
+        U_2_eff_1 = np.asarray(U_2_eff_1)
+        U_2_eff_2 = np.asarray(U_2_eff_2)
+    else:
+        U_2_eff_1 = np.asarray(U_2_eff_1) - c**2
+        U_2_eff_2 = np.asarray(U_2_eff_2) - c**2
     phi_rad = np.deg2rad(phi)
 
     K = (1 - k**2)
@@ -46,6 +50,15 @@ def calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_c
     bb = - K * np.sin(2 * phi_rad) / (1 - K * np.cos(phi_rad)**2)
     A = (np.sqrt(aa) * (c_2 - c_1)/bb + (c_1 + c_2)/2)/4
     B = (np.sqrt(aa) * (c_1 - c_2)/bb + (c_1 + c_2)/2)/4
+    
+    if np.any(A < 0):
+        print(f"Attention: {np.sum(A < 0)} valeurs négatives dans A, min={np.min(A)}")
+        # A = np.maximum(1e-10, A)
+    
+    if np.any(B < 0):
+        print(f"Attention: {np.sum(B < 0)} valeurs négatives dans B, min={np.min(B)}")
+        # B = np.maximum(1e-10, B)
+
 
     # print("A min/max:", np.min(A), np.max(A))
     # print("B min/max:", np.min(B), np.max(B))
@@ -54,9 +67,20 @@ def calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_c
     # print("c_1 min/max:", np.min(c_1), np.max(c_1))
     # print("c_2 min/max:", np.min(c_2), np.max(c_2))
 
-    a = np.sqrt(A) + np.sqrt(B) - U_mean
-    b = (np.sqrt(A) - np.sqrt(B))/np.sqrt(aa)
+    sqrtA = np.sign(A) * np.sqrt(np.abs(A))  # Assure que A reste positif
+    sqrtB = np.sign(B) * np.sqrt(np.abs(B))  # Assure que B reste positif
+    
+    # a = np.sqrt(A) + np.sqrt(B) - U_mean
+    # b = (np.sqrt(A) - np.sqrt(B))/np.sqrt(aa)
+    a = sqrtA + sqrtB - U_mean
+    b = (sqrtA - sqrtB)/np.sqrt(aa)
     c = np.zeros_like(a)
+    
+    if c is None:
+        # c = np.ones_like(a) * 0.22
+        # c = np.random.normal(-0.1, 0.1, size=a.shape)  # Simuler une composante w aléatoire
+        pass
+
     if b_coord == 1:
         return a, b, c
     elif b_coord == 2:
