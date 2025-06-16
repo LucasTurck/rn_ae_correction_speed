@@ -1,0 +1,35 @@
+{
+  "architecture": "conv_deep_lstm",
+  "E": 125,
+  "num_sonde_train": 0,
+  "num_sonde_test": 1,
+  "nb_training": -1,
+  "nb_test": 100,
+  "prediction": [
+    2,
+    2,
+    2
+  ],
+  "epochs": 1000,
+  "batch_size": 512,
+  "y": 2,
+  "loss": "mae",
+  "prediction_start": [
+    0,
+    0,
+    1
+  ],
+  "prediction_end": [
+    1,
+    0,
+    2
+  ],
+  "timesteps": 5,
+  "target_shape": [
+    5,
+    2
+  ],
+  "k": 0.1,
+  "phi": 45,
+  "U_mean": 3.5
+}
