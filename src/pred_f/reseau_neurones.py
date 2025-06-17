@@ -250,7 +250,10 @@ class ModeleReseauNeurones(ModelePrediction):
         p_end, f_end, h_end = self.parameters['prediction_end']
         timesteps = self.parameters['timesteps']
         y_index = self.parameters['y']
-        for i in range(max(p_start, f_start, h_start) * timesteps, len(data)):
+        n_start = max(p_start + (p_end - p_start) * timesteps,
+                      f_start + (f_end - f_start) * timesteps,
+                      h_start + (h_end - h_start) * timesteps)
+        for i in range(n_start, len(data)):
             feature_vector = []
             for j in range(timesteps):
                 timesteps_vector = []

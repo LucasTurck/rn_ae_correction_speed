@@ -36,6 +36,7 @@ def calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_c
     Retourne u, v, w sous forme de tableaux numpy
     """
     if c is None:
+        # print("Aucune composante c fournie")
         U_2_eff_1 = np.asarray(U_2_eff_1)
         U_2_eff_2 = np.asarray(U_2_eff_2)
     else:
@@ -44,10 +45,13 @@ def calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_c
     phi_rad = np.deg2rad(phi)
 
     K = (1 - k**2)
+    # print("K:", K)
     c_1 = U_2_eff_1 / (1 - K * np.cos(phi_rad)**2)
     c_2 = U_2_eff_2 / (1 - K * np.cos(phi_rad)**2)
     aa = (1 - K * np.sin(phi_rad)**2) / (1 - K * np.cos(phi_rad)**2)
+    # print("aa:", aa)
     bb = - K * np.sin(2 * phi_rad) / (1 - K * np.cos(phi_rad)**2)
+    # print("bb:", bb)
     A = (np.sqrt(aa) * (c_2 - c_1)/bb + (c_1 + c_2)/2)/4
     B = (np.sqrt(aa) * (c_1 - c_2)/bb + (c_1 + c_2)/2)/4
     

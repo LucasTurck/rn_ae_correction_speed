@@ -172,14 +172,22 @@ class ModelePrediction:
         if train:
             if self.y_pred_train is not None and self.y_train is not None:
                 if len(self.y_pred_train) == len(self.y_train):
-                    self.r2train = r2_score(self.y_train, self.y_pred_train)
+                    try:
+                        self.r2train = r2_score(self.y_train, self.y_pred_train)
+                    except ValueError as e:
+                        print(f"evaluer - Erreur lors du calcul de R2 pour l'entraînement : {e}")
+                        return None
                     return self.r2train
             print("evaluer - Erreur : Le nombre de prédictions d'entraînement ne correspond pas aux cibles.")
             return None
         else:
             if self.y_pred_test is not None and self.y_test is not None:
                 if len(self.y_pred_test) == len(self.y_test):
-                    self.r2test = r2_score(self.y_test, self.y_pred_test)
+                    try:
+                        self.r2test = r2_score(self.y_test, self.y_pred_test)
+                    except ValueError as e:
+                        print(f"evaluer - Erreur lors du calcul de R2 pour le test : {e}")
+                        return None
                     return self.r2test
             print("evaluer - Erreur : Le nombre de prédictions de test ne correspond pas aux cibles.")
             return None
