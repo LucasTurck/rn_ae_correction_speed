@@ -143,10 +143,10 @@ class AlgoCorrection:
         if len(self.corrected_speed) == 0:
             # self.corrected_speed.append(copy.deepcopy(self.original_speed[0]))
             self.corrected_speed.append(copy.deepcopy(self.simulated_speed[0]))
-            self.corrected_speed[-1][:,y] = self.original_speed[:,y] #+ np.random.normal(0, 0.01, len(self.corrected_speed[-1][:,y]))
-            self.corrected_speed[-1][:,0] = self.original_speed[:,0]  
-            self.corrected_speed[-1][:,2] = self.original_speed[:,2]  # Initialiser les autres composantes
-            self.corrected_speed[-1][:,1] = self.original_speed[:,1]  # Initialiser la composante v ou w selon y
+            self.corrected_speed[-1][:,y] = self.original_speed[:,y] + np.random.normal(0, 0.01, len(self.corrected_speed[-1][:,y]))
+            # self.corrected_speed[-1][:,0] = self.original_speed[:,0]  
+            # self.corrected_speed[-1][:,2] = self.original_speed[:,2]  # Initialiser les autres composantes
+            # self.corrected_speed[-1][:,1] = self.original_speed[:,1]  # Initialiser la composante v ou w selon y
         data = self.corrected_speed[-1] if len(self.corrected_speed) > 0 else self.simulated_speed[0]
         
         k = self.model.parameters['k']
@@ -187,6 +187,7 @@ class AlgoCorrection:
         
         c = np.zeros(len(u))
         c[:n_start] = self.original_speed[:n_start, y]
+        # c[:n_start] = data[:n_start, y]  # Utiliser la vitesse originale ou simulée pour les premières valeurs
         predictions = self.model.model.predict(np.array(X)).flatten()
         print(f"max_idx: {n_start}, c shape: {c.shape}, data shape: {data.shape}, predictions shape: {predictions.shape}")
         c[n_start:] = predictions
@@ -269,8 +270,12 @@ if __name__ == "__main__":
     # algo.charger_model(os.path.join(MOD_DIRECTORY, 'lstm_deep_dense', 'run_20250611_193227_f50f7962'))
     # algo.charger_model(os.path.join(MOD_DIRECTORY, 'deep_lstm_bn_dropout', 'run_20250611_195237_f4146bff'))
     # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250616_154321_bf051922'))
-    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250616_162556_fcf864a8'))
+    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250616_162556_fcf864a8'))
     # algo.charger_model(os.path.join(MOD_DIRECTORY,'cnn_lstm','run_20250617_100619_7e5a9a9c'))
+    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_141735_54a73b26'))
+    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_144539_06fae9f7'))
+    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_150506_d6e15fd7'))
+
 
     n = 200
     
