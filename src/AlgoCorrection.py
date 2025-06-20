@@ -14,7 +14,9 @@ class AlgoCorrection:
         self.original_speed = None
         self.simulated_speed = []
         self.corrected_speed = []
-        self.correction_factor = 0.1  # Facteur de correction pour la vitesse
+        self.correction_factor = 0.2  # Facteur de correction pour la vitesse
+        self.U_2_eff_1 = None
+        self.U_2_eff_2 = None
 
     def charger_model(self, run_path):
         """Charge le modèle de réseau de neurones."""
@@ -41,8 +43,8 @@ class AlgoCorrection:
         else:
             raise ValueError("y doit être 1 ou 2 pour indiquer la position de v et w dans le vecteur de vitesse.")
 
-        U_2_eff_1, U_2_eff_2 = calcul_U_effective(self.original_speed, k, phi, U_mean, b_coord=b_coord)
-        u, v, w = calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_coord=b_coord)
+        self.U_2_eff_1, self.U_2_eff_2 = calcul_U_effective(self.original_speed, k, phi, U_mean, b_coord=b_coord)
+        u, v, w = calculate_speed_vector_using_U_eff(self.U_2_eff_1, self.U_2_eff_2, k, phi, U_mean, b_coord=b_coord)
         self.simulated_speed.append(np.array(list(zip(u, v, w))))
         if not self.simulated_speed:
             raise ValueError("La vitesse simulée est vide. Vérifiez les paramètres et les données d'entrée.")
@@ -143,7 +145,8 @@ class AlgoCorrection:
         if len(self.corrected_speed) == 0:
             # self.corrected_speed.append(copy.deepcopy(self.original_speed[0]))
             self.corrected_speed.append(copy.deepcopy(self.simulated_speed[0]))
-            self.corrected_speed[-1][:,y] = self.original_speed[:,y] + np.random.normal(0, 0.01, len(self.corrected_speed[-1][:,y]))
+            # self.corrected_speed[-1][:,y] = self.original_speed[:,y] + np.random.normal(0, 0.01, len(self.corrected_speed[-1][:,y]))
+            # self.corrected_speed[-1][:,y] = self.original_speed[:,y] #+ np.sin(np.linspace(0, 2 * np.pi, len(self.corrected_speed[-1][:,y]))) * 1  # Ajouter un bruit initial à la vitesse corrigée
             # self.corrected_speed[-1][:,0] = self.original_speed[:,0]  
             # self.corrected_speed[-1][:,2] = self.original_speed[:,2]  # Initialiser les autres composantes
             # self.corrected_speed[-1][:,1] = self.original_speed[:,1]  # Initialiser la composante v ou w selon y
@@ -156,10 +159,9 @@ class AlgoCorrection:
             b_coord = 2
         elif y == 2:
             b_coord = 1
-            
-        U_2_eff_1, U_2_eff_2 = calcul_U_effective(data, k, phi, U_mean, b_coord=b_coord)
-        u, v, w = calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_coord=b_coord)
-        
+
+        u, v, w = calculate_speed_vector_using_U_eff(self.U_2_eff_1, self.U_2_eff_2, k, phi, U_mean, b_coord=b_coord)
+
         if y == 1:
             v = data[:, 1]  # v est la deuxième composante
         elif y == 2:
@@ -186,8 +188,8 @@ class AlgoCorrection:
             X.append(feature_vector[::-1])  # Inverser l'ordre des features
         
         c = np.zeros(len(u))
-        c[:n_start] = self.original_speed[:n_start, y]
-        # c[:n_start] = data[:n_start, y]  # Utiliser la vitesse originale ou simulée pour les premières valeurs
+        # c[:n_start] = self.original_speed[:n_start, y]
+        c[:n_start] = data[:n_start, y]  # Utiliser la vitesse originale ou simulée pour les premières valeurs
         predictions = self.model.model.predict(np.array(X)).flatten()
         print(f"max_idx: {n_start}, c shape: {c.shape}, data shape: {data.shape}, predictions shape: {predictions.shape}")
         c[n_start:] = predictions
@@ -198,8 +200,8 @@ class AlgoCorrection:
         if len(c) != len(data):
             print(f"Longueur des données corrigées: {c.shape}, Longueur des données originales: {data.shape}")
             raise ValueError("La longueur des données corrigées ne correspond pas à la longueur des données originales.")
-        
-        u, v, w = calculate_speed_vector_using_U_eff(U_2_eff_1, U_2_eff_2, k, phi, U_mean, b_coord=b_coord, c=c)
+
+        u, v, w = calculate_speed_vector_using_U_eff(self.U_2_eff_1, self.U_2_eff_2, k, phi, U_mean, b_coord=b_coord, c=c)
         print(f"u, v, w après correction : {u[:5]}, {v[:5]}, {w[:5]}...")
         
         if y == 1:
@@ -208,6 +210,7 @@ class AlgoCorrection:
             self.corrected_speed.append(np.column_stack((u, v, c)))
         else:
             raise ValueError("y doit être 1 ou 2 pour indiquer la position de v et w dans le vecteur de vitesse.")
+        
         if len(self.corrected_speed) > 1:
             self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1]  + (1 - self.correction_factor) * self.corrected_speed[-2]
         print(f"Vitesse corrigée : {self.corrected_speed[-1][:5]}...")  # Afficher les 5 premières valeurs
@@ -274,7 +277,8 @@ if __name__ == "__main__":
     # algo.charger_model(os.path.join(MOD_DIRECTORY,'cnn_lstm','run_20250617_100619_7e5a9a9c'))
     # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_141735_54a73b26'))
     # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_144539_06fae9f7'))
-    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_150506_d6e15fd7'))
+    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_150506_d6e15fd7'))
+    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250620_121049_42025c91'))
 
 
     n = 200
@@ -287,7 +291,8 @@ if __name__ == "__main__":
         algo.correct_speed()
         # print(f"Correction {i+1} effectuée : {algo.corrected_speed[-1][ : 5]}...")  # Afficher les 5 premières valeurs de la dernière correction
         try:
-            print(f"R2 pour la correction {i+1} : {r2_score(algo.original_speed[:n, algo.model.parameters['y']], algo.corrected_speed[-1][:n, algo.model.parameters['y']])}")
+            print(f"R2 de c pour la correction {i+1} : {r2_score(algo.original_speed[:n, algo.model.parameters['y']], algo.corrected_speed[-1][:n, algo.model.parameters['y']])}")
+            print(f"R2 de u pour la correction {i+1} : {r2_score(algo.original_speed[:n, 0], algo.corrected_speed[-1][:n, 0])}")
         except Exception as e:
             print(f"Erreur lors du calcul de R2 pour la correction {i+1} : {e}")
     algo.plot_results(n=n)  # Afficher les résultats de la correction
