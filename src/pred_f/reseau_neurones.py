@@ -1,6 +1,6 @@
 from pred_f.prediction_f import ModelePrediction, plot_predictions, args_to_dict
 from reed_data import lire_fichier_U
-from simu_X_probes import calcul_U_effective, calculate_speed_vector_using_U_eff
+from simu_X_probes import calcul_U_effective, calculate_speed_vector_using_U_eff, calcul_U_effective_tf
 from dir import MOD_PERSO_DIRECTORY, DATA_DIRECTORY
 import datetime
 import hashlib
@@ -22,130 +22,6 @@ NAMES_METRICS = ["mse", "mae"]
 NAMES_LOSSES = ["mse", "mae", "huber_loss"]
 
 
-
-def build_model1(input_shape, layer_defs):
-    """
-    Builds a Keras Sequential model based on the provided input shape and layer definitions.
-
-    Args:
-        input_shape (tuple): Shape of the input data (excluding batch size).
-        layer_defs (list of dict): List of dictionaries, each specifying a layer to add to the model.
-            Each dictionary must have a "type" key indicating the layer type (e.g., "Dense", "Conv1D", "Flatten", "Reshape").
-            Additional keys specify layer-specific parameters:
-                - For "Dense": "units" (int), "activation" (str, optional)
-                - For "Conv1D": "filters" (int), "kernel_size" (int), "activation" (str, optional), "padding" (str, optional)
-                - For "Flatten": no additional parameters
-                - For "Reshape": "target_shape" (tuple or int or list)
-
-    Returns:
-        keras.Sequential: The constructed Keras Sequential model.
-
-    Raises:
-        KeyError: If required keys for a layer type are missing in the layer definition.
-        ValueError: If an unsupported layer type is specified in layer_defs.
-
-    Note:
-        Extend the function to support additional layer types as needed.
-    """
-    model = keras.Sequential()
-    model.add(layers.Input(shape=input_shape))
-    for layer in layer_defs:
-        if layer["type"] == "Dense":
-            model.add(layers.Dense(layer["units"], activation=layer.get("activation")))
-        elif layer["type"] == "Conv1D":
-            model.add(layers.Conv1D(
-                filters=layer["filters"],
-                kernel_size=layer["kernel_size"],
-                activation=layer.get("activation"),
-                padding=layer.get("padding", "valid")
-            ))
-        elif layer["type"] == "Flatten":
-            model.add(layers.Flatten())
-        elif layer["type"] == "Reshape":
-            if not isinstance(layer["target_shape"], list):
-                model.add(layers.Reshape((input_shape[0], layer["target_shape"])))
-            else:
-                model.add(layers.Reshape(tuple(layer["target_shape"])))
-        elif layer["type"] == "Dropout":
-            model.add(layers.Dropout(layer.get("rate", 0.5)))
-        elif layer["type"] == "BatchNormalization":
-            model.add(layers.BatchNormalization())
-        elif layer["type"] == "LSTM":
-            model.add(layers.LSTM(layer["units"], activation=layer.get("activation"), return_sequences=layer.get("return_sequences", False)))
-    return model
-
-def build_model2(input_shape, layer_defs):
-    model = keras.Sequential()
-    model.add(layers.Input(shape=input_shape))
-
-    def get_regularizer(name, value):
-        if name is None or value is None:
-            return None
-        if name == "l1":
-            return regularizers.l1(float(value))
-        if name == "l2":
-            return regularizers.l2(float(value))
-        if name == "l1_l2":
-            return regularizers.l1_l2()
-        return None
-
-    for layer in layer_defs:
-        ltype = layer["type"]
-
-        # Préparation des arguments dynamiques
-        kwargs = dict(layer)
-        kwargs.pop("type", None)
-
-        # Gestion des régularisateurs
-        for reg in ["kernel_regularizer", "recurrent_regularizer"]:
-            if reg in kwargs:
-                kwargs[reg] = get_regularizer(kwargs[reg], 0.01) if isinstance(kwargs[reg], str) else kwargs[reg]
-
-        if ltype == "Dense":
-            model.add(layers.Dense(**kwargs))
-        elif ltype == "Conv1D":
-            model.add(layers.Conv1D(**kwargs))
-        elif ltype == "Flatten":
-            model.add(layers.Flatten())
-        elif ltype == "Reshape":
-            target_shape = kwargs.get("target_shape")
-            if not isinstance(target_shape, (list, tuple)):
-                target_shape = (input_shape[0], target_shape)
-            else:
-                target_shape = tuple(target_shape)
-            model.add(layers.Reshape(target_shape))
-        elif ltype == "Dropout":
-            model.add(layers.Dropout(kwargs.get("rate", 0.5)))
-        elif ltype == "BatchNormalization":
-            model.add(layers.BatchNormalization())
-        elif ltype == "LSTM":
-            # Gestion des régularisateurs et dropout
-            for reg in ["kernel_regularizer", "recurrent_regularizer"]:
-                if reg in kwargs:
-                    kwargs[reg] = get_regularizer(kwargs[reg], 0.01) if isinstance(kwargs[reg], str) else kwargs[reg]
-            model.add(layers.LSTM(**kwargs))
-        elif ltype == "GRU":
-            for reg in ["kernel_regularizer", "recurrent_regularizer"]:
-                if reg in kwargs:
-                    kwargs[reg] = get_regularizer(kwargs[reg], 0.01) if isinstance(kwargs[reg], str) else kwargs[reg]
-            model.add(layers.GRU(**kwargs))
-        elif ltype == "Bidirectional":
-            inner = kwargs["layer"]
-            inner_type = inner.pop("type")
-            if inner_type == "LSTM":
-                inner_layer = layers.LSTM(**inner)
-            elif inner_type == "GRU":
-                inner_layer = layers.GRU(**inner)
-            else:
-                raise ValueError(f"Type de couche bidirectionnelle non supporté: {inner_type}")
-            model.add(layers.Bidirectional(inner_layer))
-        elif ltype == "Add":
-            # Les couches Add nécessitent un modèle fonctionnel, pas séquentiel.
-            raise NotImplementedError("La couche 'Add' nécessite un modèle fonctionnel (Functional API).")
-        else:
-            raise ValueError(f"Type de couche non supporté: {ltype}")
-
-    return model
 
 def get_architecture_by_name(name, architectures):
     """
@@ -209,8 +85,10 @@ class ModeleReseauNeurones(ModelePrediction):
 
     def clear(self):
         self.model = None
+        self.data_train = None
         self.X_train = None
         self.y_train = None
+        self.data_test = None
         self.X_test = None
         self.y_test = None
         self.y_pred_train = None
@@ -309,6 +187,10 @@ class ModeleReseauNeurones(ModelePrediction):
         if data is None or len(data) == 0:
             raise ValueError(f"Aucune donnée disponible pour la sonde {num_sonde} dans E_{self.parameters['E']}.")
         
+        if train:
+            self.data_train = data
+        else:
+            self.data_test = data
         if nb_samples > 0 and nb_samples < len(data):
             # Limiter le nombre d'échantillons d'entraînement
             data = data[:nb_samples]
@@ -395,8 +277,26 @@ class ModeleReseauNeurones(ModelePrediction):
 
         self.build_model(architecture)
 
+
+    def physical_loss(self, y_true, y_pred):
+        shape = tf.shape(y_pred)[0] - 1
+        diff = tf.zeros([shape], dtype=y_pred.dtype)
+        diff = y_pred[1:] - y_pred[:-1]
+        diff_2 = (y_pred[2:] - 2 * y_pred[1:-1] + y_pred[:-2])/2
+        return tf.reduce_mean(tf.square(diff)) + tf.reduce_mean(tf.square(diff_2))
+
+    def combined_loss(self, y_true, y_pred):
+        if self.parameters['loss'] == 'mse':
+            loss_data = tf.reduce_mean(tf.square(y_true - y_pred))  # MSE
+        elif self.parameters['loss'] == 'mae':
+            loss_data = tf.reduce_mean(tf.abs(y_true - y_pred))
+        loss_phys = self.physical_loss(y_true, y_pred)
+        loss_phys = 0
+        return loss_data + 0.1 * loss_phys
+
+
     def entrainer(self):
-        self.model.compile(optimizer='adam', loss=self.parameters['loss'], metrics=NAMES_METRICS)
+        self.model.compile(optimizer='adam', loss=self.combined_loss, metrics=NAMES_METRICS)
         self.history = self.model.fit(
             self.X_train, self.y_train, 
             epochs=self.parameters["epochs"], 

@@ -3,9 +3,31 @@ from dir import DATA_DIRECTORY
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 
+def calcul_U_effective_tf(speed_vector, k, phi, U_mean, b_coord = 1):
+    """
+    speed_vector : tensor de forme (..., 3)
+    Retourne deux tensors U_eff_1, U_eff_2 de même forme que speed_vector[..., 0]
+    """
+    speed_vector = tf.convert_to_tensor(speed_vector)
+    a = speed_vector[..., 0]
+    if b_coord == 1: 
+        b = speed_vector[..., 1]
+        c = speed_vector[..., 2]
+    elif b_coord == 2:
+        b = speed_vector[..., 2]
+        c = speed_vector[..., 1]
+    else:
+        raise ValueError("b_coord doit être 1 ou 2 pour indiquer la position de v et w dans le vecteur de vitesse.")
+    phi_rad = tf.cast(phi, tf.float32) * (tf.constant(3.141592653589793, dtype=tf.float32) / 180.0)
 
+    U_2_eff_1 = (U_mean + a) ** 2 + b**2 + c**2 - (1 - k**2) * ((U_mean + a) * tf.cos(phi_rad) - b * tf.sin(phi_rad))**2
+
+    U_2_eff_2 = (U_mean + a) ** 2 + b**2 + c**2 - (1 - k**2) * ((U_mean + a) * tf.cos(-phi_rad) - b * tf.sin(-phi_rad))**2
+
+    return U_2_eff_1, U_2_eff_2
 
 def calcul_U_effective(speed_vector, k, phi, U_mean, b_coord = 1):
     """

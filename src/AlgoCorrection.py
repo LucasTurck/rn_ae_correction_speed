@@ -14,7 +14,7 @@ class AlgoCorrection:
         self.original_speed = None
         self.simulated_speed = []
         self.corrected_speed = []
-        self.correction_factor = 0.1  # Facteur de correction pour la vitesse
+        self.correction_factor = 0.3  # Facteur de correction pour la vitesse
 
     def charger_model(self, run_path):
         """Charge le modèle de réseau de neurones."""
@@ -57,7 +57,7 @@ class AlgoCorrection:
         # self.simulated_speed[-1]*=(1- noise_level)
         print(f"Bruit ajouté à la vitesse simulée : {self.simulated_speed[-1][:5]}...")
 
-    def correct_speed2(self):
+    def correct_speed(self, n = 100):
         y = self.model.parameters['y']
         if self.original_speed is None or not self.simulated_speed:
             raise ValueError("Les vitesses originales et simulées doivent être définies avant la correction.")
@@ -128,13 +128,13 @@ class AlgoCorrection:
             self.corrected_speed.append(np.array(list(zip(u, c, w))))
         elif y == 2:
             self.corrected_speed.append(np.array(list(zip(u, v, c))))
-        if len(self.corrected_speed) > 1:
-            self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1]  + (1 - self.correction_factor) * self.corrected_speed[-2]
-        # else:
-        #     self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1] + (1 - self.correction_factor) * self.simulated_speed[0]
+        
+        self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1]  + (1 - self.correction_factor) * self.corrected_speed[-2]
+        
+        
         print(f"Vitesse corrigée après correction : {self.corrected_speed[-1][:5]}...")  # Afficher les 5 premières valeurs
     
-    def correct_speed(self):
+    def correct_speed2(self, n = 100):
         """Corrige la vitesse simulée en utilisant le modèle de réseau de neurones."""
         
         y = self.model.parameters['y']
@@ -142,13 +142,13 @@ class AlgoCorrection:
             raise ValueError("Les vitesses originales et simulées doivent être définies avant la correction.")
         if len(self.corrected_speed) == 0:
             # self.corrected_speed.append(copy.deepcopy(self.original_speed[0]))
-            self.corrected_speed.append(copy.deepcopy(self.simulated_speed[0]))
-            self.corrected_speed[-1][:,y] = self.original_speed[:,y] + np.random.normal(0, 0.01, len(self.corrected_speed[-1][:,y]))
+            self.corrected_speed.append(copy.deepcopy(self.simulated_speed[0][:n,:]))
+            self.corrected_speed[-1][:6,y] = self.original_speed[:6,y] #+ np.random.normal(0, 0.01, len(self.corrected_speed[-1][:,y]))
             # self.corrected_speed[-1][:,0] = self.original_speed[:,0]  
             # self.corrected_speed[-1][:,2] = self.original_speed[:,2]  # Initialiser les autres composantes
             # self.corrected_speed[-1][:,1] = self.original_speed[:,1]  # Initialiser la composante v ou w selon y
-        data = self.corrected_speed[-1] if len(self.corrected_speed) > 0 else self.simulated_speed[0]
-        
+        data = self.corrected_speed[-1][:n] if len(self.corrected_speed) > 0 else self.simulated_speed[0][:n]
+
         k = self.model.parameters['k']
         phi = self.model.parameters['phi']
         U_mean = self.model.parameters['U_mean']
@@ -165,32 +165,43 @@ class AlgoCorrection:
         elif y == 2:
             w = data[:, 2]
         
-        X = []
         p_start, f_start, h_start = self.model.parameters['prediction_start']
         p_end, f_end, h_end = self.model.parameters['prediction_end']
         timesteps = self.model.parameters['timesteps']
         n_start = max(p_start + (p_end - p_start) * timesteps,
                       f_start + (f_end - f_start) * timesteps,
                       h_start + (h_end - h_start) * timesteps)
+        # c[:n_start] = self.original_speed[:n_start, y]
+        c = list(data[:n_start, y])
+        feature_vector = []
+        for j in range(timesteps):
+            timesteps_vector = []
+            for l in range(p_start, p_end):
+                timesteps_vector.append(u[n_start - j - l])
+            for l in range(f_start, f_end):
+                timesteps_vector.append(v[n_start - j - l])
+            for l in range(h_start, h_end):
+                timesteps_vector.append(w[n_start - j - l])
+            feature_vector.append(timesteps_vector)
         for i in range(n_start, len(u)):
-            feature_vector = []
-            for j in range(timesteps):
-                timesteps_vector = []
-                for l in range(p_start, p_end):
-                    timesteps_vector.append(u[i - j - l])
+            c.append(self.model.model.predict(np.array([feature_vector[::-1]]), verbose=0).flatten()[0])  # Inverser l'ordre des features et prédire
+            feature_vector.pop(0)  # Supprimer le premier élément pour faire de la place
+            timesteps_vector = []
+            for l in range(p_start, p_end):
+                timesteps_vector.append(u[i - l])
+            if y == 1:
                 for l in range(f_start, f_end):
-                    timesteps_vector.append(v[i - j - l])
+                    timesteps_vector.append(c[i - l])
                 for l in range(h_start, h_end):
-                    timesteps_vector.append(w[i - j - l])
-                feature_vector.append(timesteps_vector)
-            X.append(feature_vector[::-1])  # Inverser l'ordre des features
+                    timesteps_vector.append(w[i - l])
+            elif y == 2:
+                for l in range(f_start, f_end):
+                    timesteps_vector.append(v[i - l])
+                for l in range(h_start, h_end):
+                    timesteps_vector.append(c[i - l])
+            feature_vector.append(timesteps_vector)  # Ajouter le nouveau vecteur de caractéristiques
         
-        c = np.zeros(len(u))
-        c[:n_start] = self.original_speed[:n_start, y]
-        # c[:n_start] = data[:n_start, y]  # Utiliser la vitesse originale ou simulée pour les premières valeurs
-        predictions = self.model.model.predict(np.array(X)).flatten()
-        print(f"max_idx: {n_start}, c shape: {c.shape}, data shape: {data.shape}, predictions shape: {predictions.shape}")
-        c[n_start:] = predictions
+        # print(f"max_idx: {n_start}, c shape: {c.shape}, data shape: {data.shape}, predictions shape: {predictions.shape}")
         c = np.array(c)
         
         print(f"c : {c[:5]}...")
@@ -208,8 +219,13 @@ class AlgoCorrection:
             self.corrected_speed.append(np.column_stack((u, v, c)))
         else:
             raise ValueError("y doit être 1 ou 2 pour indiquer la position de v et w dans le vecteur de vitesse.")
+        
+        # ajout d'une moyenne mobile pour lisser la correction
+        self.corrected_speed[-1][1:-1, :] = (self.corrected_speed[-1][:-2, :] + 2 * self.corrected_speed[-1][1:-1, :] + self.corrected_speed[-1][2:, :]) / 4
+        
         if len(self.corrected_speed) > 1:
             self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1]  + (1 - self.correction_factor) * self.corrected_speed[-2]
+            
         print(f"Vitesse corrigée : {self.corrected_speed[-1][:5]}...")  # Afficher les 5 premières valeurs
 
         
@@ -227,7 +243,7 @@ class AlgoCorrection:
         for i in range(len(self.corrected_speed)-1):
             plt.scatter(times[:n], self.corrected_speed[i][:n, 0], label=f'u corrigé {i+1} (m/s)', alpha=0.5, s=i+5)
         plt.plot(times[:n], self.corrected_speed[-1][:n, 0], color='blue', alpha=0.5, linewidth=1)
-        plt.legend()
+        # plt.legend()
         plt.title('Composante u')
         plt.xlabel('Temps')
         plt.ylabel('Vitesse (m/s)')
@@ -274,7 +290,10 @@ if __name__ == "__main__":
     # algo.charger_model(os.path.join(MOD_DIRECTORY,'cnn_lstm','run_20250617_100619_7e5a9a9c'))
     # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_141735_54a73b26'))
     # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_144539_06fae9f7'))
-    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_150506_d6e15fd7'))
+    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_150506_d6e15fd7'))
+    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250619_114838_42025c91'))
+    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250619_143505_42025c91'))
+    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250619_150721_42025c91'))
 
 
     n = 200
@@ -284,7 +303,7 @@ if __name__ == "__main__":
     algo.add_noise_in_simulated_speed(noise_level=0.1)  # Ajouter du bruit à la vitesse simulée
     
     for i in range(10):  # Effectuer n itérations de correction
-        algo.correct_speed()
+        algo.correct_speed(n=n)
         # print(f"Correction {i+1} effectuée : {algo.corrected_speed[-1][ : 5]}...")  # Afficher les 5 premières valeurs de la dernière correction
         try:
             print(f"R2 pour la correction {i+1} : {r2_score(algo.original_speed[:n, algo.model.parameters['y']], algo.corrected_speed[-1][:n, algo.model.parameters['y']])}")
