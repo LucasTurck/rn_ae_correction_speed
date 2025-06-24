@@ -66,8 +66,7 @@
             {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
             {"type": "LSTM", "units": 50, "return_sequences": true},
             {"type": "LSTM", "units": 25},
-            {"type": "Flatten"},
-            {"type": "Dense", "units": 1}
+            {"type": "Flatten"}
         ]
     },
     {

@@ -210,7 +210,7 @@ class AlgoCorrection:
             self.corrected_speed.append(np.column_stack((u, v, c)))
         else:
             raise ValueError("y doit être 1 ou 2 pour indiquer la position de v et w dans le vecteur de vitesse.")
-        
+        self.corrected_speed[-1][1:-1, :] = (self.corrected_speed[-1][:-2, :] + 2 * self.corrected_speed[-1][1:-1, :] + self.corrected_speed[-1][2:, :]) / 4
         if len(self.corrected_speed) > 1:
             self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1]  + (1 - self.correction_factor) * self.corrected_speed[-2]
         print(f"Vitesse corrigée : {self.corrected_speed[-1][:5]}...")  # Afficher les 5 premières valeurs
