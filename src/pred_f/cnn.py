@@ -4,8 +4,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from reed_data import lire_fichier_U
 import copy
-from dir import DATA_DIRECTORY
+from dir import DATA_DIRECTORY, MOD_PERSO_DIRECTORY
 
+import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import json
@@ -15,6 +16,7 @@ import matplotlib.pyplot as plt
 import datetime
 import hashlib
 from sklearn.metrics import mean_squared_error, r2_score
+import re
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
 
@@ -35,13 +37,21 @@ def get_architecture_by_name(name, architectures):
 
 
 class CNN:
-    def __init__(self, parameters):
+    def __init__(self, parameters=None):
         self.name = "CNN"
         self.parameters = parameters if parameters is not None else {}
         self.data = None
         self.model = None
         self.history = None
-        
+        self.X_train_before = None
+        self.X_train_after = None
+        self.y_train = None
+        self.Y_pred_train = None
+        self.X_test_before = None
+        self.X_test_after = None
+        self.y_test = None
+        self.Y_pred_test = None
+             
     def load_data(self):
         # lire les données
         times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, f"E_{self.parameters['E']}", 'U'))
@@ -57,8 +67,8 @@ class CNN:
         self.parameters['num_sonde_test'] = self.parameters.get('num_sonde_test', 1) # numéro de la sonde de test
         self.parameters['nb_training'] = self.parameters.get('nb_training', -1) # nombre d'exemples d'entraînement (-1 pour tout utiliser)
         self.parameters['nb_test'] = self.parameters.get('nb_test', 100) # nombre d'exemples de test
-        self.parameters['timesteps_before'] = self.parameters.get('timesteps_before', 5) # nombre de pas de temps avant l'événement
-        self.parameters['timesteps_after'] = self.parameters.get('timesteps_after', 5) # nombre de pas de temps après l'événement
+        self.parameters['timesteps_before'] = self.parameters.get('timesteps_before', 10) # nombre de pas de temps avant l'événement
+        self.parameters['timesteps_after'] = self.parameters.get('timesteps_after', 10) # nombre de pas de temps après l'événement
         self.parameters['y_col'] = self.parameters.get('y_col', 1) # colonne de la variable cible
         self.parameters['prediction'] = self.parameters.get('prediction', [1, 1, 0])
         sum = self.parameters['prediction'][0] + self.parameters['prediction'][1] + self.parameters['prediction'][2]
@@ -67,7 +77,8 @@ class CNN:
 
         self.parameters['architecture'] = self.parameters.get('architecture', 'cnn_lstm') # architecture du modèle
         self.parameters['batch_size'] = self.parameters.get('batch_size', 512) # taille du batch
-        self.parameters['epochs'] = self.parameters.get('epochs', 100) # nombre de fois que le reseau de neurones est entraîné sur l'ensemble de données
+        self.parameters['epochs'] = self.parameters.get('epochs', 20) # nombre de fois que le reseau de neurones est entraîné sur l'ensemble de données
+        self.parameters['loss'] = self.parameters.get('loss', 'mae') # fonction de perte
         print(f"Paramètres du modèle de prédiction : {self.parameters}")
         
     def set_parameters(self, parameters):
@@ -155,6 +166,14 @@ class CNN:
         if architecture is None:
             raise ValueError(f"Architecture '{self.parameters['architecture']}' non trouvée dans le fichier JSON.")
         
+        if self.parameters['timesteps_after'] == 0:
+            input_before = keras.Input(shape=self.parameters['input_shape_before'], name="input_before")
+            model_before = self.build_model(architecture, input_shape=self.parameters['input_shape_before'])
+            out_before = model_before(input_before)
+            output = layers.Dense(units=1, activation='linear')(out_before)
+            self.model = keras.Model(inputs=input_before, outputs=output)
+            return self.model
+
         input_before = keras.Input(shape=self.parameters['input_shape_before'], name="input_before")
         input_after = keras.Input(shape=self.parameters['input_shape_after'], name="input_after")
         model_before = self.build_model(architecture, input_shape=self.parameters['input_shape_before'])
@@ -168,10 +187,13 @@ class CNN:
         output = layers.Dense(units=1, activation='linear')(merged)
 
         self.model = keras.Model(inputs=[input_before, input_after], outputs=output)
+        return self.model
 
     def create_data(self, train = True):
         """
         Crée les données d'entraînement pour le modèle de prédiction.
+        Args:
+            train (bool): Si True, crée les données d'entraînement, sinon crée les données de test.
         """
         if self.model is None:
             raise ValueError("Le modèle n'a pas été créé. Veuillez appeler create_reseau() avant d'entraîner le modèle.")
@@ -228,36 +250,38 @@ class CNN:
         if nb == -1:
             nb = len(data) - timesteps_before - timesteps_after - 1
         n = min(len(data) - timesteps_after - 1, timesteps_before + nb - 1)
-        print(n)
+
         for i in range(timesteps_before, n):
-            features_before.pop(0)
-            timesteps_vector = []
-            if prediction[0] == 1:
-                timesteps_vector.append(data[i+1][0])
-            if y == 1:
-                if prediction[1] == 1:
-                    timesteps_vector.append(data[i][1])
-                if prediction[2] == 1:
-                    timesteps_vector.append(data[i+1][2])
-            elif y == 2:
-                if prediction[1] == 1:
-                    timesteps_vector.append(data[i+1][1])
-                if prediction[2] == 1:
-                    timesteps_vector.append(data[i][2])
-            features_before.append(timesteps_vector)
+            if timesteps_before > 0:
+                features_before.pop(0)
+                timesteps_vector = []
+                if prediction[0] == 1:
+                    timesteps_vector.append(data[i+1][0])
+                if y == 1:
+                    if prediction[1] == 1:
+                        timesteps_vector.append(data[i][1])
+                    if prediction[2] == 1:
+                        timesteps_vector.append(data[i+1][2])
+                elif y == 2:
+                    if prediction[1] == 1:
+                        timesteps_vector.append(data[i+1][1])
+                    if prediction[2] == 1:
+                        timesteps_vector.append(data[i][2])
+                features_before.append(timesteps_vector)
             
-            features_after.pop(0)
-            timesteps_vector = []
-            if prediction[0] == 1:
-                timesteps_vector.append(data[i+1+timesteps_after][0])
-            if prediction[1] == 1:
-                timesteps_vector.append(data[i+1+timesteps_after][1])
-            if prediction[2] == 1:
-                timesteps_vector.append(data[i+1+timesteps_after][2])
-            features_after.append(timesteps_vector)
-            X_before.append(copy.deepcopy(features_before))
-            X_after.append(copy.deepcopy(features_after[::-1]))
-            Y.append(data[i][y])
+            if timesteps_after > 0:
+                features_after.pop(0)
+                timesteps_vector = []
+                if prediction[0] == 1:
+                    timesteps_vector.append(data[i+1+timesteps_after][0])
+                if prediction[1] == 1:
+                    timesteps_vector.append(data[i+1+timesteps_after][1])
+                if prediction[2] == 1:
+                    timesteps_vector.append(data[i+1+timesteps_after][2])
+                features_after.append(timesteps_vector)
+                X_before.append(copy.deepcopy(features_before))
+                X_after.append(copy.deepcopy(features_after[::-1]))
+                Y.append(data[i][y])
 
         # print(f"X = {X[:5]}")
         # print(f"Nombre data : {np.array(data).shape}, n = {n}, timesteps_before = {timesteps_before}, timesteps_after = {timesteps_after}")
@@ -273,6 +297,22 @@ class CNN:
             self.X_test_after = np.array(X_after)
             self.Y_test = np.array(Y)
 
+    def physical_loss(self, y_true, y_pred):
+        shape = tf.shape(y_pred)[0] - 1
+        diff = tf.zeros([shape], dtype=y_pred.dtype)
+        diff = y_pred[1:] - y_pred[:-1]
+        diff_2 = (y_pred[2:] - 2 * y_pred[1:-1] + y_pred[:-2])/2
+        return tf.reduce_mean(tf.square(diff)) + tf.reduce_mean(tf.square(diff_2))
+
+    def combined_loss(self, y_true, y_pred):
+        if self.parameters['loss'] == 'mse':
+            loss_data = tf.reduce_mean(tf.square(y_true - y_pred))  # MSE
+        elif self.parameters['loss'] == 'mae':
+            loss_data = tf.reduce_mean(tf.abs(y_true - y_pred))
+        loss_phys = self.physical_loss(y_true, y_pred)
+        loss_phys = 0
+        return loss_data + 0.1 * loss_phys
+
     def train(self):
         """
         Entraîne le modèle de prédiction sur les données d'entraînement.
@@ -283,18 +323,19 @@ class CNN:
             self.create_reseau()
 
 
-        self.model.compile(optimizer='adam', loss='mae', metrics=['mae','mse'])
+        self.model.compile(optimizer='adam', loss=self.combined_loss, metrics=['mae','mse'])
+        if self.parameters['timesteps_after'] == 0:
+            X = self.X_train_before
+        else:
+            X = [self.X_train_before, self.X_train_after]
         self.history = self.model.fit(
-            x=[self.X_train_before, self.X_train_after],
+            x=X,
             y=self.Y_train,
             batch_size=self.parameters['batch_size'],
             epochs=self.parameters['epochs'],#            validation_split=0.2,
             verbose=0,
             callbacks=[TqdmCallback(verbose=1)]
         )
-
-        self.Y_pred_train = self.model.predict([self.X_train_before, self.X_train_after])
-        self.Y_pred_train = self.Y_pred_train.reshape(-1, 1)
     
     def predict(self, train = True):
         """
@@ -305,23 +346,23 @@ class CNN:
                 self.create_data(train=True)
             if self.model is None:
                 self.create_reseau()
-            self.Y_pred_train = self.model.predict([self.X_train_before, self.X_train_after])
+            if self.parameters['timesteps_after'] == 0:
+                X = self.X_train_before
+            else:
+                X = [self.X_train_before, self.X_train_after]
+            self.Y_pred_train = self.model.predict(X)
             self.Y_pred_train = self.Y_pred_train.reshape(-1, 1)
         else:
             if self.X_test_before is None or self.Y_test is None:
                 self.create_data(train=False)
-            self.Y_pred_test = self.model.predict([self.X_test_before, self.X_test_after])
+            if self.model is None:
+                self.create_reseau()
+            if self.parameters['timesteps_after'] == 0:
+                X = self.X_test_before
+            else:
+                X = [self.X_test_before, self.X_test_after]
+            self.Y_pred_test = self.model.predict(X)
             self.Y_pred_test = self.Y_pred_test.reshape(-1, 1)
-    
-    def r2_score(self, train =  True):
-        """
-        Calcule le coefficient de détermination R² pour les prédictions du modèle.
-        Args:
-            train (bool): Si True, calcule R² sur les données d'entraînement, sinon sur les données de test.
-        Returns:
-            float: Coefficient de détermination R².
-        """
-        
     
     def save_model(self, path = "../mod"):
         """
@@ -334,6 +375,30 @@ class CNN:
         run_id = get_run_id(self.parameters)
         dossier = os.path.join(path, f"{self.parameters['architecture']}", run_id)
         self.model.save(dossier)
+        
+        # Sauvegarde des paramètres du modèle
+        chemin_parametres = os.path.join(dossier, "assets", "config.json")
+        with open(chemin_parametres, "w") as f:
+            json.dump(self.parameters, f, indent=2)
+            
+        # Sauvegarde de l'historique d'entraînement
+        chemin_historique = os.path.join(dossier, "assets", "historique.json")
+        if self.model is not None:
+            with open(chemin_historique, "w") as f:
+                json.dump(self.history.history, f, indent=2)
+        
+                
+        # Reformater les listes sur une ligne
+        with open(chemin_historique, "r") as f:
+            contenu = f.read()
+
+        # Remplace les listes multilignes par une seule ligne
+        contenu = re.sub(r'\[\s+([^\]]+?)\s+\]', lambda m: '[' + ' '.join(m.group(1).split()) + ']', contenu)
+
+        with open(chemin_historique, "w") as f:
+            f.write(contenu)
+            
+        print(f"Modèle et historique sauvegardés dans {dossier}")        
 
     def charge_model(self, path = "../mod"):
         """
@@ -343,9 +408,28 @@ class CNN:
         """
         if not os.path.exists(path):
             raise FileNotFoundError(f"Le fichier de modèle '{path}' n'existe pas.")
-        self.model = keras.models.load_model(path)
+
+        chemin_parametres = os.path.join(path, "assets", "config.json")
+        with open(chemin_parametres, "r") as f:
+            self.parameters = json.load(f)
+        self.init_parameters()
         
-    def affichage_history(self, loss):
+        
+        self.model = keras.models.load_model(
+            path,
+            custom_objects={"combined_loss": self.combined_loss}
+        )
+        
+        # Charger l'historique d'entraînement (optionnel)
+        chemin_historique = os.path.join(path, "assets", "historique.json")
+        if os.path.exists(chemin_historique):
+            import types
+            with open(chemin_historique, "r") as f:
+                history_dict = json.load(f)
+            # Créer un objet factice avec un attribut .history
+            self.history = types.SimpleNamespace(history=history_dict)
+ 
+    def affichage_history(self, loss, axis=None):
         """
         Affiche l'historique de l'entraînement du modèle.
         Args:
@@ -353,45 +437,85 @@ class CNN:
         """
         if loss not in self.history.history:
             raise ValueError(f"L'historique '{loss}' n'est pas disponible.")
-        plt.plot(self.history.history[loss], label=loss)
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.legend()
-        plt.show()
+        if axis is None:
+            axis = plt.gca()
+        axis.plot(self.history.history[loss], label=loss)
+        axis.set_xlabel("Epochs")
+        axis.set_ylabel("Loss")
+
+        axis.legend(title=f"Valeur finale : {self.history.history[loss][-1]:.4f} (Epoch {len(self.history.history[loss])})")
+        return axis
         
-    def affichage_prediction(self, train=True):
+    def affichage_prediction(self, train=True, axis=None):
         """
         Affiche les prédictions du modèle par rapport aux valeurs réelles.
         Args:
             train (bool): Si True, affiche les prédictions sur les données d'entraînement, sinon sur les données de test.
         """
+        if axis is None:
+            axis = plt.gca()
         if train:
             if self.Y_pred_train is None or self.Y_train is None:
                 self.predict(train=True)
-            plt.plot(self.Y_train, label='Valeurs réelles')
-            plt.plot(self.Y_pred_train, label='Prédictions')
+            axis.plot(self.Y_train, label='Valeurs réelles')
+            axis.plot(self.Y_pred_train, label='Prédictions')
         else:
             if self.Y_pred_test is None or self.Y_test is None:
                 self.predict(train=False)
-            plt.plot(self.Y_test, label='Valeurs réelles')
-            plt.plot(self.Y_pred_test, label='Prédictions')
-        plt.xlabel("Index")
-        plt.ylabel("Valeur")
-        plt.legend()
-        plt.show()
+            axis.plot(self.Y_test, label='Valeurs réelles')
+            axis.plot(self.Y_pred_test, label='Prédictions')
+        axis.set_xlabel("time")
+        axis.set_ylabel("vitesse [m/s]")
+        axis.legend(title=f"R² : {self.r2_score(train)}")
+        
+        return axis
+
+    def r2_score(self, train=True):
+        """
+        Calcule le coefficient de détermination R² pour les prédictions du modèle.
+        Args:
+            train (bool): Si True, calcule R² sur les données d'entraînement, sinon sur les données de test.
+        Returns:
+            float: Coefficient de détermination R².
+        """
+        if train:
+            if self.Y_pred_train is None or self.Y_train is None:
+                self.predict(train=True)
+            try:
+                self.r2_train = r2_score(self.Y_train, self.Y_pred_train)
+            except ValueError as e:
+                print(f"Erreur lors du calcul de R² pour les données d'entraînement : {e}")
+                return None
+            return self.r2_train
+        else:
+            if self.Y_pred_test is None or self.Y_test is None:
+                self.predict(train=False)
+            try:
+                self.r2_test = r2_score(self.Y_test, self.Y_pred_test)
+            except ValueError as e:
+                print(f"Erreur lors du calcul de R² pour les données de test : {e}")
+                return None
+            return self.r2_test
         
 if __name__ == "__main__":
-    reseau = CNN({})
-    reseau.init_parameters()
+    reseau = CNN()
+    # reseau.charge_model(os.path.join(MOD_PERSO_DIRECTORY, "cnn_lstm", "run_20250624_150753_5cd228d9"))
+    reseau.init_parameters()#
     reseau.load_data()
-    reseau.create_reseau()
+    reseau.create_reseau()#
     reseau.create_data(train=True)
     reseau.create_data(train=False)
-    reseau.train()
-    reseau.save_model()
+    reseau.train()#
     reseau.predict(train=True)
     reseau.predict(train=False)
-    reseau.affichage_history('mae')
-    reseau.affichage_prediction(train=True)
-    reseau.affichage_prediction(train=False)
+    print(f"R² sur les données d'entraînement : {reseau.r2_score(train=True)}")
+    print(f"R² sur les données de test : {reseau.r2_score(train=False)}")
     
+    reseau.save_model()#
+    fig, ax = plt.subplots(1, 3, figsize=(12, 6))
+    reseau.affichage_history('mae', axis=ax[0])
+    reseau.affichage_prediction(train=True, axis=ax[1])
+    reseau.affichage_prediction(train=False, axis=ax[2])
+    
+    plt.tight_layout()
+    plt.show()

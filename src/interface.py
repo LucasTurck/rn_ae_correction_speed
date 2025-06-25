@@ -1,6 +1,7 @@
 from ui.UIModelSelector import UIModelSelector
 from ui.UIParameters import UIParameters
 from ui.UIAlgoCorrection import UIAlgoCorrection
+from ui.UICnn import UICnn
 import tkinter as tk
 from tkinter import ttk
 import os
@@ -20,6 +21,11 @@ def open_ui_algo_correction(parent=None, controller=None):
     global ui_algo_correction
     ui_algo_correction = UIAlgoCorrection(parent, controller)
 
+def open_ui_cnn(parent=None, controller=None):
+    """Ouvre l'interface des paramètres du CNN."""
+    global ui_cnn
+    ui_cnn = UICnn(parent, controller)
+
 
 if __name__ == "__main__":
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
@@ -30,12 +36,15 @@ if __name__ == "__main__":
     
     main_window = tk.Tk()
     main_window.title("Interface Réseau de Neurones")
+    # Bouton pour ouvrir l'interface UICnn
+    ttk.Button(main_window, text="CNN", command=lambda: open_ui_cnn(main_window, None)).pack(pady=10)
     # bouton pour ouvrir l'interface UIparameters
     ttk.Button(main_window, text="Paramètres du réseau de neurones", command=lambda: open_ui_parameters(main_window, None)).pack(pady=10)
     # bouton pour ouvrir l'interface UIModelSelector
     ttk.Button(main_window, text="Sélectionner un modèle", command=lambda: open_ui_model_selector(main_window, None)).pack(pady=10)
     # bouton pour ouvrir l'interface UIAlgoCorrection
     ttk.Button(main_window, text="Corriger l'algorithme", command=lambda: open_ui_algo_correction(main_window, None)).pack(pady=10)
+
 
     def destroy_ui():
         """Détruit les interfaces UIParameters et UIModelSelector."""
@@ -47,6 +56,8 @@ if __name__ == "__main__":
                 ui_model_selector.destroy()
             if ui_algo_correction:
                 ui_algo_correction.destroy()
+            if ui_cnn:
+                ui_cnn.destroy()
         except Exception as e:
             # print(f"Erreur lors de la destruction des interfaces : {e}")
             pass
@@ -54,6 +65,7 @@ if __name__ == "__main__":
             ui_parameters = None
             ui_model_selector = None
             ui_algo_correction = None
+            ui_cnn = None
             main_window.destroy()
 
     # Bouton pour quitter l'application

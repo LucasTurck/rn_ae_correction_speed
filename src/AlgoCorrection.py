@@ -215,8 +215,6 @@ class AlgoCorrection:
             self.corrected_speed[-1] = self.correction_factor * self.corrected_speed[-1]  + (1 - self.correction_factor) * self.corrected_speed[-2]
         print(f"Vitesse corrigée : {self.corrected_speed[-1][:5]}...")  # Afficher les 5 premières valeurs
 
-        
-
     def plot_results(self, n = 5000):
         """Affiche les résultats de la correction."""
         

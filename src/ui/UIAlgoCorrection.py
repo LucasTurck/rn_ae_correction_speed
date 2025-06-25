@@ -63,7 +63,6 @@ class UIAlgoCorrection(ttk.Frame):
         # Bouton pour fermer la fenêtre
         tk.Button(self.control_frame, text="Fermer", command=self.result_window.destroy).pack(side="right")
 
-
     def UI_destroy(self):
         self.algo_correction.clear()
         del self.algo_correction
@@ -79,7 +78,6 @@ class UIAlgoCorrection(ttk.Frame):
             self.architecture_var.set("")
             self.run_combo['values'] = []
             self.run_var.set("")
-
 
     def update_runs(self, event=None):
         architectures = self.architecture_var.get()
@@ -172,3 +170,5 @@ class UIAlgoCorrection(ttk.Frame):
         
         self.canvas.draw()  # Redessiner la figure avec les nouvelles données
         self.result_window.update_idletasks()
+        
+
