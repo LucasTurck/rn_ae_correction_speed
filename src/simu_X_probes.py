@@ -96,7 +96,7 @@ if __name__ == "__main__":
     # k = 0.00001     # k denotes the tangential sensitivity coefficient
     k = 0.1
     phi = 45       # Angle of the probe in degrees to the mean flow direction
-    U_mean = 3.5  # Mean flow speed in m/s
+    U_mean = 0  # Mean flow speed in m/s
     b_coord = 2  # Indique la position de v et w dans le vecteur de vitesse (1 pour v en 2ème composante, 2 pour w en 2ème composante)
 
     times, sondes = lire_fichier_U(os.path.join(DATA_DIRECTORY, 'E_125', 'U'))

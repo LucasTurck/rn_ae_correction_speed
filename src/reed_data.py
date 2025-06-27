@@ -56,9 +56,9 @@ def lire_fichier_U(filepath):
         sondes[i] = [positions_sondes[i], colonnes[i]]
         
     # On moyenne u pour chaque sonde
-    for i in range(len(sondes)):
-        mean_u = sum(col[0] for col in sondes[i][1]) / len(sondes[i][1])
-        sondes[i][1] = [(col[0] - mean_u, col[1], col[2]) for col in sondes[i][1]]
+    # for i in range(len(sondes)):
+    #     mean_u = sum(col[0] for col in sondes[i][1]) / len(sondes[i][1])
+    #     sondes[i][1] = [(col[0] - mean_u, col[1], col[2]) for col in sondes[i][1]]
 
     return times, sondes
 

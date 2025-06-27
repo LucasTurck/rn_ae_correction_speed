@@ -160,7 +160,7 @@ class AlgoCorrection:
         elif y == 2:
             b_coord = 1
 
-        u, v, w = calculate_speed_vector_using_U_eff(self.U_2_eff_1, self.U_2_eff_2, k, phi, U_mean, b_coord=b_coord)
+        u, v, w = calculate_speed_vector_using_U_eff(self.U_2_eff_1, self.U_2_eff_2, k, phi, U_mean, b_coord=b_coord, c=data[:, y])
 
         if y == 1:
             v = data[:, 1]  # v est la deuxième composante
@@ -265,18 +265,9 @@ class AlgoCorrection:
 
 if __name__ == "__main__":
     algo = AlgoCorrection()
-    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'lstm_deep_dense', 'run_20250611_171132_e5f7cebe'))
-    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'lstm_deep_dense', 'run_20250611_172014_256d71f6'))
-    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'lstm_deep_dense', 'run_20250612_102729_2a9e54f8'))
     # algo.charger_model(os.path.join(MOD_DIRECTORY, 'lstm_deep_dense', 'run_20250611_193227_f50f7962'))
     # algo.charger_model(os.path.join(MOD_DIRECTORY, 'deep_lstm_bn_dropout', 'run_20250611_195237_f4146bff'))
-    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250616_154321_bf051922'))
-    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250616_162556_fcf864a8'))
-    # algo.charger_model(os.path.join(MOD_DIRECTORY,'cnn_lstm','run_20250617_100619_7e5a9a9c'))
-    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_141735_54a73b26'))
-    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_144539_06fae9f7'))
-    # algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250617_150506_d6e15fd7'))
-    algo.charger_model(os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250620_121049_42025c91'))
+    algo.charger_model(os.path.join(MOD_DIRECTORY,'cnn_lstm','run_20250617_100619_7e5a9a9c'))
 
 
     n = 200
