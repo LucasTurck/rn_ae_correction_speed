@@ -326,7 +326,7 @@ class UItestCnn(ttk.Frame):
     
     def load_model(self, path):
         self.model_RdN = CNN()
-        self.model_RdN.charge_model(path)
+        self.model_RdN.load_model(path)
         self.result_window.title(f"Résultats - {self.model_RdN.parameters['architecture']}")
         self.model_RdN.load_data()
         self.model_RdN.create_data(train=True)

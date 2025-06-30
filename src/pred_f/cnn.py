@@ -400,7 +400,7 @@ class CNN:
             
         print(f"Modèle et historique sauvegardés dans {dossier}")        
 
-    def charge_model(self, path = "../mod"):
+    def load_model(self, path = "../mod"):
         """
         Charge le modèle de prédiction à partir d'un fichier.
         Args:
@@ -499,7 +499,7 @@ class CNN:
         
 if __name__ == "__main__":
     reseau = CNN()
-    # reseau.charge_model(os.path.join(MOD_PERSO_DIRECTORY, "cnn_lstm", "run_20250624_150753_5cd228d9"))
+    # reseau.load_model(os.path.join(MOD_PERSO_DIRECTORY, "cnn_lstm", "run_20250624_150753_5cd228d9"))
     reseau.init_parameters()#
     reseau.load_data()
     reseau.create_reseau()#
