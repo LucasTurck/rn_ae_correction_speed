@@ -159,9 +159,9 @@ class  UIParametersCnn(ttk.Frame):
             int(self.prediction_w_var.get())
         ]
         sum = self.parameters['prediction'][0] + self.parameters['prediction'][1] + self.parameters['prediction'][2]
-        self.parameters['input_shape_before'] = [self.parameters['timesteps_before'], sum]
-        self.parameters['input_shape_after'] = [self.parameters['timesteps_after'], sum]
-        
+        self.parameters['input_shape_before'] = [self.parameters['timesteps_before'], sum*len(self.parameters['puisance'])]
+        self.parameters['input_shape_after'] = [self.parameters['timesteps_after'], sum*len(self.parameters['puisance'])]
+
         try:
             with open(os.path.join(RDN_DIRECTORY, "last_config.json"), 'w') as file:
                 json.dump(self.parameters, file, indent=4)
@@ -313,7 +313,9 @@ class UItestCnn(ttk.Frame):
         self.model_RdN.load_data()
         self.model_RdN.create_reseau()
         self.model_RdN.create_data(train=True)
+        self.model_RdN.add_power(train=True)
         self.model_RdN.create_data(train=False)
+        self.model_RdN.add_power(train=False)
         self.model_RdN.train()
         self.model_RdN.predict(train=True)
         print(f"R² pour l'entraînement : {self.model_RdN.r2_score(train=True)}")

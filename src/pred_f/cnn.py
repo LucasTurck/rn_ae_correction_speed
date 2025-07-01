@@ -71,9 +71,10 @@ class CNN:
         self.parameters['timesteps_after'] = self.parameters.get('timesteps_after', 10) # nombre de pas de temps après l'événement
         self.parameters['y_col'] = self.parameters.get('y_col', 1) # colonne de la variable cible
         self.parameters['prediction'] = self.parameters.get('prediction', [1, 1, 0])
+        self.parameters['puisance'] = self.parameters.get('puisance', [1,2]) # puissance des variables de prédiction
         sum = self.parameters['prediction'][0] + self.parameters['prediction'][1] + self.parameters['prediction'][2]
-        self.parameters['input_shape_before'] = self.parameters.get('input_shape_before', (self.parameters['timesteps_before'], sum)) # forme de l'entrée du modèle
-        self.parameters['input_shape_after'] = self.parameters.get('input_shape_after', (self.parameters['timesteps_after'], sum)) # forme de l'entrée du modèle
+        self.parameters['input_shape_before'] = self.parameters.get('input_shape_before', (self.parameters['timesteps_before'], sum*len(self.parameters['puisance']))) # forme de l'entrée du modèle
+        self.parameters['input_shape_after'] = self.parameters.get('input_shape_after', (self.parameters['timesteps_after'], sum*len(self.parameters['puisance']))) # forme de l'entrée du modèle
 
         self.parameters['architecture'] = self.parameters.get('architecture', 'cnn_lstm') # architecture du modèle
         self.parameters['batch_size'] = self.parameters.get('batch_size', 512) # taille du batch
@@ -296,6 +297,30 @@ class CNN:
             self.X_test_before = np.array(X_before)
             self.X_test_after = np.array(X_after)
             self.Y_test = np.array(Y)
+
+    def add_power(self, train = True):
+        if train:
+            if self.X_train_before is None or self.Y_train is None:
+                self.create_data(train=True)
+            X_before = self.X_train_before
+            X_after = self.X_train_after
+            if len(self.parameters['puisance']) == 1 and self.parameters['puisance'][0] == 1:
+                return
+            X_before = np.concatenate((X_before, np.concatenate([np.power(X_before, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
+            X_after = np.concatenate((X_after, np.concatenate([np.power(X_after, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
+            self.X_train_before = X_before
+            self.X_train_after = X_after
+        else:
+            if self.X_test_before is None or self.Y_test is None:
+                self.create_data(train=False)
+            X_before = self.X_test_before
+            X_after = self.X_test_after
+            if len(self.parameters['puisance']) == 1 and self.parameters['puisance'][0] == 1:
+                return
+            X_before = np.concatenate((X_before, np.concatenate([np.power(X_before, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
+            X_after = np.concatenate((X_after, np.concatenate([np.power(X_after, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
+            self.X_test_before = X_before
+            self.X_test_after = X_after
 
     def physical_loss(self, y_true, y_pred):
         shape = tf.shape(y_pred)[0] - 1
