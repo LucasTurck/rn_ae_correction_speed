@@ -129,6 +129,10 @@ class  UIParametersCnn(ttk.Frame):
         ttk.Entry(frame_pred, textvariable=self.prediction_v_var, width=5).pack(side=tk.LEFT, padx=5)
         ttk.Entry(frame_pred, textvariable=self.prediction_w_var, width=5).pack(side=tk.LEFT, padx=5)
         
+        ## puissances :
+        ttk.Label(parent, text="Puissances (séparées par des virgules) :").pack()
+        ttk.Entry(parent, textvariable=self.puissance_var).pack()
+        
         ## epochs :
         ttk.Label(parent, text="Epochs :").pack()
         ttk.Entry(parent, textvariable=self.epochs_var).pack()
@@ -159,7 +163,7 @@ class  UIParametersCnn(ttk.Frame):
             int(self.prediction_v_var.get()),
             int(self.prediction_w_var.get())
         ]
-        self.parameters['puisance'] = [int(p) for p in self.puissance_var.get().split(',') if p.strip().isdigit()]
+        self.parameters['puisance'] = [float(p) for p in self.puissance_var.get().split(',')]
         sum = self.parameters['prediction'][0] + self.parameters['prediction'][1] + self.parameters['prediction'][2]
         self.parameters['input_shape_before'] = [self.parameters['timesteps_before'], sum*len(self.parameters['puisance'])]
         self.parameters['input_shape_after'] = [self.parameters['timesteps_after'], sum*len(self.parameters['puisance'])]
