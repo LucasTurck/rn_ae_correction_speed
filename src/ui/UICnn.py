@@ -159,7 +159,7 @@ class  UIParametersCnn(ttk.Frame):
             int(self.prediction_v_var.get()),
             int(self.prediction_w_var.get())
         ]
-        self.parameters['puisance'] = [int(p) for p in self.puissance_var.get().split(',') if p.strip().isdigit()]
+        # self.parameters['puisance'] = [int(p) for p in self.puissance_var.get().split(',')]
         sum = self.parameters['prediction'][0] + self.parameters['prediction'][1] + self.parameters['prediction'][2]
         self.parameters['input_shape_before'] = [self.parameters['timesteps_before'], sum*len(self.parameters['puisance'])]
         self.parameters['input_shape_after'] = [self.parameters['timesteps_after'], sum*len(self.parameters['puisance'])]

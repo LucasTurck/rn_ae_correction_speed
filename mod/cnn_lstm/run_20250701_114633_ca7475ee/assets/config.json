@@ -1,0 +1,47 @@
+{
+  "architecture": "cnn_lstm",
+  "E": 125,
+  "num_sonde_train": 0,
+  "num_sonde_test": 1,
+  "nb_training": -1,
+  "nb_test": -1,
+  "prediction": [
+    1,
+    0,
+    0
+  ],
+  "epochs": 1000,
+  "batch_size": 512,
+  "y": 1,
+  "loss": "mae",
+  "prediction_start": [
+    0,
+    1,
+    0
+  ],
+  "prediction_end": [
+    1,
+    2,
+    0
+  ],
+  "timesteps": 10,
+  "target_shape": [
+    10,
+    2
+  ],
+  "timesteps_before": 10,
+  "timesteps_after": 10,
+  "y_col": 1,
+  "puisance": [
+    1,
+    2
+  ],
+  "input_shape_before": [
+    10,
+    2
+  ],
+  "input_shape_after": [
+    10,
+    2
+  ]
+}
