@@ -36,6 +36,10 @@ def get_architecture_by_name(name, architectures):
     raise ValueError(f"Architecture '{name}' non trouvée.")
 
 
+def power_transform(X, power):
+    """Applique une transformation de puissance à chaque élément de X."""
+    return np.sign(X) * np.power(np.abs(X), power)
+
 class CNN:
     def __init__(self, parameters=None):
         self.name = "CNN"
@@ -306,8 +310,8 @@ class CNN:
             X_after = self.X_train_after
             if len(self.parameters['puisance']) == 1 and self.parameters['puisance'][0] == 1:
                 return
-            X_before = np.concatenate((X_before, np.concatenate([np.power(X_before, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
-            X_after = np.concatenate((X_after, np.concatenate([np.power(X_after, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
+            X_before = np.concatenate((X_before, np.concatenate([power_transform(X_before, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
+            X_after = np.concatenate((X_after, np.concatenate([power_transform(X_after, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
             self.X_train_before = X_before
             self.X_train_after = X_after
         else:
@@ -317,8 +321,8 @@ class CNN:
             X_after = self.X_test_after
             if len(self.parameters['puisance']) == 1 and self.parameters['puisance'][0] == 1:
                 return
-            X_before = np.concatenate((X_before, np.concatenate([np.power(X_before, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
-            X_after = np.concatenate((X_after, np.concatenate([np.power(X_after, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
+            X_before = np.concatenate((X_before, np.concatenate([power_transform(X_before, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
+            X_after = np.concatenate((X_after, np.concatenate([power_transform(X_after, p) for p in self.parameters['puisance'] if p != 1], axis=-1)), axis=-1)
             self.X_test_before = X_before
             self.X_test_after = X_after
 
