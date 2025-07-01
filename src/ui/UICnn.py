@@ -60,6 +60,7 @@ class  UIParametersCnn(ttk.Frame):
         self.sonde_test_var = tk.StringVar(value=self.parameters.get('num_sonde_test', 1))
         self.nb_test_var = tk.StringVar(value=self.parameters.get('nb_test', 100))
         
+        self.puissance_var = tk.StringVar(value=self.parameters.get('puisance', [1, 2, 3]))
         self.timesteps_before_var = tk.StringVar(value=self.parameters.get('timesteps_before', 10))
         self.timesteps_after_var = tk.StringVar(value=self.parameters.get('timesteps_after', 10))
         self.epochs_var = tk.StringVar(value=self.parameters.get('epochs', 10))
@@ -158,6 +159,7 @@ class  UIParametersCnn(ttk.Frame):
             int(self.prediction_v_var.get()),
             int(self.prediction_w_var.get())
         ]
+        self.parameters['puisance'] = [int(p) for p in self.puissance_var.get().split(',') if p.strip().isdigit()]
         sum = self.parameters['prediction'][0] + self.parameters['prediction'][1] + self.parameters['prediction'][2]
         self.parameters['input_shape_before'] = [self.parameters['timesteps_before'], sum*len(self.parameters['puisance'])]
         self.parameters['input_shape_after'] = [self.parameters['timesteps_after'], sum*len(self.parameters['puisance'])]
