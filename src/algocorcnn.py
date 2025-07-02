@@ -88,8 +88,8 @@ class AlgoCorCNN:
             self.corrected_speed.append(np.column_stack((self.simulated_speed[-1][:, 0], self.simulated_speed[-1][:, 1], Y_pred[:])))
 
     def step_correction(self):
-        self.calculate_speed_vector_from_U_eff()
         self.predict_speed()
+        self.calculate_speed_vector_from_U_eff()
     
     
     def plot_results(self, n = 5000):
@@ -145,6 +145,8 @@ if __name__ == "__main__":
     
     algo.set_original_speed()
     algo.calculate_U_eff()
+    
+    algo.calculate_speed_vector_from_U_eff()
     
     for i in range(10):
         algo.step_correction()

@@ -7,6 +7,8 @@ import tkinter as tk
 import json
 import matplotlib.pyplot as plt
 import threading
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 
 class UICnn(ttk.Frame):
     def __init__(self, parent, controller):

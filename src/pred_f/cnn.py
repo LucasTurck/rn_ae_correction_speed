@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from reed_data import lire_fichier_U
 import copy
-from dir import DATA_DIRECTORY, MOD_PERSO_DIRECTORY
+from dir import DATA_DIRECTORY
 
 import tensorflow as tf
 from tensorflow import keras
