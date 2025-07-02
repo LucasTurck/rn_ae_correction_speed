@@ -33,15 +33,16 @@
   "timesteps_after": 10,
   "y_col": 1,
   "puisance": [
-    1,
-    2
+    1.0,
+    2.0,
+    3.0
   ],
   "input_shape_before": [
     10,
-    2
+    3
   ],
   "input_shape_after": [
     10,
-    2
+    3
   ]
 }
