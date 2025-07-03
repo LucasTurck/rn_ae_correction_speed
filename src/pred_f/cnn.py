@@ -17,6 +17,7 @@ import datetime
 import hashlib
 from sklearn.metrics import mean_squared_error, r2_score
 import re
+from scipy import stats
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
 
@@ -525,7 +526,115 @@ class CNN:
                 print(f"Erreur lors du calcul de R² pour les données de test : {e}")
                 return None
             return self.r2_test
-        
+    
+    def affichage_statistiques(self, train=True, axis=None):
+        """
+        Affiche la RMS, les moments d'ordre 2, 3, 4 et le PDF croisé des prédictions du modèle.
+        Args:
+            train (bool): Si True, affiche les statistiques sur les données d'entraînement, sinon sur les données de test.
+            axis: matplotlib axis (optionnel)
+        """
+        if axis is None:
+            axis = plt.gca()
+        if train:
+            print("Affichage des statistiques sur les données d'entraînement")
+            if self.Y_pred_train is None or self.Y_train is None:
+                self.predict(train=True)
+            y_true = self.Y_train.flatten()
+            y_pred = self.Y_pred_train.flatten()
+        else:
+            print("Affichage des statistiques sur les données de test")
+            if self.Y_pred_test is None or self.Y_test is None:
+                self.predict(train=False)
+            y_true = self.Y_test.flatten()
+            y_pred = self.Y_pred_test.flatten()
+
+        # RMS
+        rms_true = np.sqrt(np.mean(y_true**2))
+        rms_pred = np.sqrt(np.mean(y_pred**2))
+        print(f"RMS (réel): {rms_true:.4f}")
+        print(f"RMS (préd): {rms_pred:.4f}")
+
+        # Moments d'ordre 2, 3, 4
+        for order in [2, 3, 4]:
+            m_true = stats.moment(y_true, moment=order)
+            m_pred = stats.moment(y_pred, moment=order)
+            print(f"Moment d'ordre {order} (réel): {m_true:.4f}")
+            print(f"Moment d'ordre {order} (préd): {m_pred:.4f}")
+
+        # PDF croisé (densité jointe)
+        values = np.vstack([y_true, y_pred])
+        kde = stats.gaussian_kde(values)
+        xmin, xmax = y_true.min(), y_true.max()
+        ymin, ymax = y_pred.min(), y_pred.max()
+        X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+        positions = np.vstack([X.ravel(), Y.ravel()])
+        Z = np.reshape(kde(positions).T, X.shape)
+
+        pcm = axis.imshow(
+            np.rot90(Z),
+            extent=[xmin, xmax, ymin, ymax],
+            aspect='auto',
+            cmap='viridis'
+        )
+        axis.set_xlabel("Valeurs réelles")
+        axis.set_ylabel("Prédictions")
+        if train:
+            axis.set_title("PDF croisé (réel, préd) - Entraînement")
+        else:
+            axis.set_title("PDF croisé (réel, préd) - Test")
+        plt.colorbar(pcm, ax=axis, label="Densité")
+
+        return axis
+    
+    def affichage_fft(self, train=True, axis=None, fs=1.0):
+        """
+        Affiche le spectre de puissance (FFT) des signaux réel et prédit.
+        Args:
+            train (bool): Si True, utilise les données d'entraînement, sinon de test.
+            axis: matplotlib axis (optionnel)
+            fs (float): Fréquence d'échantillonnage (par défaut 1.0)
+        """
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        if axis is None:
+            axis = plt.gca()
+        if train:
+            if self.Y_pred_train is None or self.Y_train is None:
+                self.predict(train=True)
+            y_true = self.Y_train.flatten()
+            y_pred = self.Y_pred_train.flatten()
+        else:
+            if self.Y_pred_test is None or self.Y_test is None:
+                self.predict(train=False)
+            y_true = self.Y_test.flatten()
+            y_pred = self.Y_pred_test.flatten()
+
+        # Calcul FFT
+        N = len(y_true)
+        freq = np.fft.rfftfreq(N, d=1/fs)
+        fft_true = np.fft.rfft(y_true - np.mean(y_true))
+        fft_pred = np.fft.rfft(y_pred - np.mean(y_pred))
+
+        # Spectre de puissance
+        power_true = np.abs(fft_true)**2
+        power_pred = np.abs(fft_pred)**2
+
+        axis.plot(freq, power_true, label="Réalité", color='blue')
+        axis.plot(freq, power_pred, label="Prédiction", color='orange', linestyle='--')
+        axis.set_xlabel("Fréquence")
+        axis.set_ylabel("Spectre de puissance")
+        if train:
+            axis.set_title("Spectre de puissance (FFT) - Entraînement")
+        else:
+            axis.set_title("Spectre de puissance (FFT) - Test")
+        axis.set_yscale('log')
+        axis.set_xscale('log')
+        axis.legend()
+        return axis
+    
+    
 if __name__ == "__main__":
     reseau = CNN()
     # reseau.load_model(os.path.join(MOD_PERSO_DIRECTORY, "cnn_lstm", "run_20250624_150753_5cd228d9"))

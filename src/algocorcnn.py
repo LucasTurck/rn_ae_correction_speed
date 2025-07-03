@@ -69,6 +69,7 @@ class AlgoCorCNN:
         #     raise RuntimeError("Le modèle n'est pas chargé. Veuillez charger le modèle avant de prédire la vitesse.")
         self.cnn.data[self.cnn.parameters['num_sonde_test']] = copy.deepcopy(self.simulated_speed[-1])
         self.cnn.create_data(train = False)
+        self.cnn.add_power(train = False)
         # Vérification des entrées
         if self.cnn.parameters['timesteps_after'] == 0:
             X = self.cnn.X_test_before

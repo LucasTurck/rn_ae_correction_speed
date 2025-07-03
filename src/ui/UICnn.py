@@ -351,10 +351,35 @@ class UItestCnn(ttk.Frame):
 
     def afficher_resultats(self):
 
-        fig, self.ax = plt.subplots(1, 3, figsize=(12, 6))
-        self.model_RdN.affichage_history('mae', axis=self.ax[0])
-        self.model_RdN.affichage_prediction(train=True, axis=self.ax[1])
-        self.model_RdN.affichage_prediction(train=False, axis=self.ax[2])
+        self.affichage_fft()
+        self.affichage_prediction()
+        self.affichage_statistiques()
+        self.affichage_history()
 
+    def affichage_fft(self):
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+        self.model_RdN.affichage_fft(train=True, axis=ax[0], fs=1.0)
+        self.model_RdN.affichage_fft(train=False, axis=ax[1], fs=1.0)
+        plt.tight_layout()
+        plt.show()
+
+    def affichage_prediction(self):
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+        self.model_RdN.affichage_prediction(train=True, axis=ax[0])
+        self.model_RdN.affichage_prediction(train=False, axis=ax[1])
+        plt.tight_layout()
+        plt.show()
+    
+    def affichage_statistiques(self):
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+        self.model_RdN.affichage_statistiques(train=True, axis=ax[0])
+        self.model_RdN.affichage_statistiques(train=False, axis=ax[1])
+        plt.tight_layout()
+        plt.show()
+    
+    def affichage_history(self):
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+        self.model_RdN.affichage_history('mae', axis=ax[0])
+        self.model_RdN.affichage_history('mse', axis=ax[1])
         plt.tight_layout()
         plt.show()
