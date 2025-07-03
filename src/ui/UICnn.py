@@ -358,8 +358,8 @@ class UItestCnn(ttk.Frame):
 
     def affichage_fft(self):
         fig, ax = plt.subplots(1, 2, figsize=(12, 6))
-        self.model_RdN.affichage_fft(train=True, axis=ax[0], fs=1.0)
-        self.model_RdN.affichage_fft(train=False, axis=ax[1], fs=1.0)
+        self.model_RdN.affichage_fft(train=True, axis=ax[0], fs=1/0.0006)
+        self.model_RdN.affichage_fft(train=False, axis=ax[1], fs=1/0.0006)
         plt.tight_layout()
         plt.show()
 
