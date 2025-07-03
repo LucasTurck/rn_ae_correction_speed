@@ -634,6 +634,44 @@ class CNN:
         axis.legend()
         return axis
     
+    def affichage_co_spectre(self, train=True, axis=None, fs=1.0):
+        """
+        Affiche le co-spectre (densité spectrale croisée) entre le signal réel et prédit.
+        Args:
+            train (bool): Si True, utilise les données d'entraînement, sinon de test.
+            axis: matplotlib axis (optionnel)
+            fs (float): Fréquence d'échantillonnage (Hz)
+        """
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from scipy.signal import csd
+    
+        if axis is None:
+            axis = plt.gca()
+        if train:
+            if self.Y_pred_train is None or self.Y_train is None:
+                self.predict(train=True)
+            y_true = self.Y_train.flatten()
+            y_pred = self.Y_pred_train.flatten()
+        else:
+            if self.Y_pred_test is None or self.Y_test is None:
+                self.predict(train=False)
+            y_true = self.Y_test.flatten()
+            y_pred = self.Y_pred_test.flatten()
+    
+        # Calcul du co-spectre
+        f, Pxy = csd(y_true, y_pred, fs=fs, nperseg=min(1024, len(y_true)))
+        axis.semilogy(f, np.abs(Pxy), label="|Co-spectre|")
+        axis.set_xlabel("Fréquence [Hz]")
+        axis.set_ylabel("Amplitude")
+        if train:
+            axis.set_title("Co-spectre (Entraînement)")
+        else:
+            axis.set_title("Co-spectre (Test)")
+        axis.legend()
+        axis.grid(True, which="both", ls="--", alpha=0.5)
+        return axis
+    
     
 if __name__ == "__main__":
     reseau = CNN()

@@ -236,7 +236,7 @@ class UILoadModel(ttk.Frame):
         
         self.archi_combo['values'] = architectures
         if architectures:
-            self.architecture_var.set(architectures[-1])
+            self.architecture_var.set(architectures[0])
             self.run_combo.set('')
             self.update_runs()
         else:
@@ -271,7 +271,7 @@ class UILoadModel(ttk.Frame):
                         print(f"Erreur de décodage JSON pour le fichier {config_path}")
             self.run_combo['values'] = self.run_display_list
             if self.run_display_list:
-                self.run_var.set(self.run_display_list[0])
+                self.run_var.set(self.run_display_list[-1])
             else:
                 self.run_var.set("")
         else:
@@ -351,10 +351,11 @@ class UItestCnn(ttk.Frame):
 
     def afficher_resultats(self):
 
+        self.affichage_co_spectre()
         self.affichage_fft()
         self.affichage_prediction()
-        self.affichage_statistiques()
-        self.affichage_history()
+        # self.affichage_statistiques()
+        # self.affichage_history()
 
     def affichage_fft(self):
         fig, ax = plt.subplots(1, 2, figsize=(12, 6))
@@ -381,5 +382,12 @@ class UItestCnn(ttk.Frame):
         fig, ax = plt.subplots(1, 2, figsize=(12, 6))
         self.model_RdN.affichage_history('mae', axis=ax[0])
         self.model_RdN.affichage_history('mse', axis=ax[1])
+        plt.tight_layout()
+        plt.show()
+    
+    def affichage_co_spectre(self):
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+        self.model_RdN.affichage_co_spectre(train=True, axis=ax[0], fs=1/0.0006)
+        self.model_RdN.affichage_co_spectre(train=False, axis=ax[1], fs=1/0.0006)
         plt.tight_layout()
         plt.show()
