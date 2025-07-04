@@ -64,8 +64,11 @@
         "name": "cnn_lstm",
         "layers": [
             {"type": "Conv1D", "filters": 64, "kernel_size": 3, "activation": "relu", "padding": "same"},
+            {"type": "BatchNormalization"},
             {"type": "LSTM", "units": 50, "return_sequences": true},
+            {"type": "Dropout", "rate": 0.3},
             {"type": "LSTM", "units": 25},
+            {"type": "Dropout", "rate": 0.3},
             {"type": "Flatten"}
         ]
     },
