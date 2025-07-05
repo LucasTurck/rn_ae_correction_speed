@@ -7,7 +7,7 @@ import tkinter as tk
 import json
 import matplotlib.pyplot as plt
 import threading
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from scipy.signal import butter, filtfilt
 
 
 class UICnn(ttk.Frame):
@@ -324,6 +324,7 @@ class UItestCnn(ttk.Frame):
         self.model_RdN.add_power(train=True)
         self.model_RdN.create_data(train=False)
         self.model_RdN.add_power(train=False)
+        self.model_RdN.Y_train = filtre_passe_bas(self.model_RdN.Y_train.flatten(), fs=1/0.0006, fc=200, order=4)
         self.model_RdN.train()
         self.model_RdN.predict(train=True)
         print(f"R² pour l'entraînement : {self.model_RdN.r2_score(train=True)}")
@@ -334,6 +335,7 @@ class UItestCnn(ttk.Frame):
         # bouton pour sauvegarder le modèle
         ttk.Button(self.result_window, text="Sauvegarder le modèle", command=lambda: self.model_RdN.save_model(MOD_PERSO_DIRECTORY)).pack(pady=10)
     
+
     def load_model(self, path):
         self.model_RdN = CNN()
         self.model_RdN.load_model(path)
@@ -344,8 +346,10 @@ class UItestCnn(ttk.Frame):
         self.model_RdN.create_data(train=False)
         self.model_RdN.add_power(train=False)
         self.model_RdN.predict(train=True)
+        # self.model_RdN.Y_pred_train = filtre_passe_bas(self.model_RdN.Y_pred_train.flatten(), fs=1/0.0006, fc=200, order=4)
         print(f"R² pour l'entraînement : {self.model_RdN.r2_score(train=True)}")
         self.model_RdN.predict(train=False)
+        # self.model_RdN.Y_pred_test = filtre_passe_bas(self.model_RdN.Y_pred_test.flatten(), fs=1/0.0006, fc=200, order=4)
         print(f"R² pour le test : {self.model_RdN.r2_score(train=False)}")
         self.afficher_resultats()
 
@@ -353,14 +357,22 @@ class UItestCnn(ttk.Frame):
 
         self.affichage_co_spectre()
         self.affichage_fft()
+        self.affichage_welch()
         self.affichage_prediction()
         # self.affichage_statistiques()
-        # self.affichage_history()
+        self.affichage_history()
 
     def affichage_fft(self):
         fig, ax = plt.subplots(1, 2, figsize=(12, 6))
         self.model_RdN.affichage_fft(train=True, axis=ax[0], fs=1/0.0006)
         self.model_RdN.affichage_fft(train=False, axis=ax[1], fs=1/0.0006)
+        plt.tight_layout()
+        plt.show()
+
+    def affichage_welch(self):
+        fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+        self.model_RdN.affichage_welch(train=True, axis=ax[0], fs=1/0.0006)
+        self.model_RdN.affichage_welch(train=False, axis=ax[1], fs=1/0.0006)
         plt.tight_layout()
         plt.show()
 
@@ -391,3 +403,10 @@ class UItestCnn(ttk.Frame):
         self.model_RdN.affichage_co_spectre(train=False, axis=ax[1], fs=1/0.0006)
         plt.tight_layout()
         plt.show()
+
+def filtre_passe_bas(signal, fs, fc, order=4):
+    
+    w = fc / (fs / 2)  # Normalisation de la fréquence de coupure
+    b, a = butter(order, w, btype='low')
+    filtered_signal = filtfilt(b, a, signal)
+    return filtered_signal

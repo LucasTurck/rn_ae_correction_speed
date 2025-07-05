@@ -18,6 +18,7 @@ import hashlib
 from sklearn.metrics import mean_squared_error, r2_score
 import re
 from scipy import stats
+from scipy.signal import csd, welch
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # Ignore TensorFlow warnings
 
@@ -595,9 +596,6 @@ class CNN:
             axis: matplotlib axis (optionnel)
             fs (float): Fréquence d'échantillonnage (par défaut 1.0)
         """
-        import numpy as np
-        import matplotlib.pyplot as plt
-
         if axis is None:
             axis = plt.gca()
         if train:
@@ -634,6 +632,44 @@ class CNN:
         axis.legend()
         return axis
     
+    def affichage_welch(self, train=True, axis=None, fs=1.0, nperseg=1024):
+        """
+        Affiche le spectre de puissance (Welch) des signaux réel et prédit.
+        Args:
+            train (bool): Si True, utilise les données d'entraînement, sinon de test.
+            axis: matplotlib axis (optionnel)
+            fs (float): Fréquence d'échantillonnage (par défaut 1.0)
+            nperseg (int): Taille des segments pour Welch (par défaut 1024)
+        """
+        if axis is None:
+            axis = plt.gca()
+        if train:
+            if self.Y_pred_train is None or self.Y_train is None:
+                self.predict(train=True)
+            y_true = self.Y_train.flatten()
+            y_pred = self.Y_pred_train.flatten()
+        else:
+            if self.Y_pred_test is None or self.Y_test is None:
+                self.predict(train=False)
+            y_true = self.Y_test.flatten()
+            y_pred = self.Y_pred_test.flatten()
+
+        # Spectre de puissance par Welch
+        f_true, pxx_true = welch(y_true - np.mean(y_true), fs=fs, nperseg=min(nperseg, len(y_true)))
+        f_pred, pxx_pred = welch(y_pred - np.mean(y_pred), fs=fs, nperseg=min(nperseg, len(y_pred)))
+
+        axis.semilogy(f_true, pxx_true, label="Réalité", color='blue')
+        axis.semilogy(f_pred, pxx_pred, label="Prédiction", color='orange', linestyle='--')
+        axis.set_xlabel("Fréquence [Hz]")
+        axis.set_ylabel("Spectre de puissance (Welch)")
+        if train:
+            axis.set_title("Spectre de puissance (Welch) - Entraînement")
+        else:
+            axis.set_title("Spectre de puissance (Welch) - Test")
+        axis.legend()
+        axis.grid(True, which="both", ls="--", alpha=0.5)
+        return axis
+    
     def affichage_co_spectre(self, train=True, axis=None, fs=1.0):
         """
         Affiche le co-spectre (densité spectrale croisée) entre le signal réel et prédit.
@@ -642,9 +678,6 @@ class CNN:
             axis: matplotlib axis (optionnel)
             fs (float): Fréquence d'échantillonnage (Hz)
         """
-        import numpy as np
-        import matplotlib.pyplot as plt
-        from scipy.signal import csd
     
         if axis is None:
             axis = plt.gca()
