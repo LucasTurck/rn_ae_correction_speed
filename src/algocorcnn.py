@@ -98,7 +98,10 @@ class AlgoCorCNN:
         self.Y_pred = self.Y_pred.reshape(-1,1)
         Y_pred = np.zeros(len(self.original_speed[:,0]))
         Y_pred[cnn.parameters['timesteps_before']:-cnn.parameters['timesteps_after']-1] = self.Y_pred[:,0]
-        Y_pred = filtre_passe_bas(Y_pred, fs = 1/0.0006, fc=200, order = 4)
+        if start:
+            Y_pred = filtre_passe_bas(Y_pred, fs = 1/0.0006, fc=200, order = 4)
+        else:
+            Y_pred = filtre_passe_bas(Y_pred, fs = 1/0.0006, fc=400, order = 4)
         
         print(f"Y_pred: {Y_pred[:5]}")  # Afficher les 5 premières valeurs de Y_pred pour débogage
         
@@ -167,7 +170,8 @@ def filtre_passe_bas(signal, fs, fc, order=4):
 
 if __name__ == "__main__":
     algo = AlgoCorCNN()
-    model_path_start = os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250702_172926_9a1a3296')
+    # model_path_start = os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250702_172926_9a1a3296')
+    model_path_start = os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250708_160938_bd68652b')
     algo.load_model(model_path_start, start=True)
     model_path = os.path.join(MOD_PERSO_DIRECTORY, 'cnn_lstm', 'run_20250707_175213_754c67cc')
     algo.load_model(model_path, start=False)
