@@ -349,7 +349,7 @@ class UItestCnn(ttk.Frame):
         # self.model_RdN.Y_pred_train = filtre_passe_bas(self.model_RdN.Y_pred_train.flatten(), fs=1/0.0006, fc=200, order=4)
         print(f"R² pour l'entraînement : {self.model_RdN.r2_score(train=True)}")
         self.model_RdN.predict(train=False)
-        self.model_RdN.Y_pred_test = filtre_passe_bas(self.model_RdN.Y_pred_test.flatten(), fs=1/0.0006, fc=300, order=4)
+        self.model_RdN.Y_pred_test = filtre_passe_bas(self.model_RdN.Y_pred_test.flatten(), fs=1/0.0006, fc=100, order=4)
         print(f"R² pour le test : {self.model_RdN.r2_score(train=False)}")
         self.afficher_resultats()
 
